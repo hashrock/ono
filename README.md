@@ -2,6 +2,17 @@
 
 A lightweight JSX library for static site generation with UnoCSS support.
 
+## Why Ono?
+
+Ono is designed to be a minimal alternative to Astro, leveraging TypeScript's built-in JSX transformation capabilities. The core philosophy is:
+
+- **Minimal Dependencies**: Uses TypeScript's standard `tsx` transform feature, avoiding complex build toolchains
+- **High Portability**: Designed to be lightweight enough to run in Web Workers or even entirely in the browser
+- **Simple Architecture**: A minimal subset of static site generation features, focusing on what matters most
+- **Future Vision**: Enable browser-based REPL experiences and client-side static site generation
+
+Unlike heavyweight frameworks, Ono embraces simplicity. It's perfect for developers who want the power of JSX and component-based development without the complexity of a full framework.
+
 ## Features
 
 - Minimal JSX runtime for building static HTML sites
