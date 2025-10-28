@@ -1,7 +1,7 @@
 {
   "name": "@hashrock/ono",
   "version": "0.1.1",
-  "description": "A lightweight JSX library for static site generation with UnoCSS support",
+  "description": "Minimalist SSG framework with JSX, powered by TypeScript's JSX transformer",
   "type": "module",
   "main": "src/jsx-runtime.js",
   "bin": {
