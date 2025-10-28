@@ -31,11 +31,12 @@ npm install @hashrock/ono
 
 ## Quick Start
 
-Initialize a new project:
+Initialize a new project with npx (no installation required):
 
 ```bash
-ono init my-project
+npx @hashrock/ono init my-project
 cd my-project
+npm install
 npm run dev
 ```
 

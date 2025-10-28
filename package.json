@@ -1,11 +1,11 @@
 {
   "name": "@hashrock/ono",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A lightweight JSX library for static site generation with UnoCSS support",
   "type": "module",
   "main": "src/jsx-runtime.js",
   "bin": {
-    "ono": "./src/cli.js"
+    "ono": "src/cli.js"
   },
   "files": [
     "src",
@@ -38,12 +38,11 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "devDependencies": {
+  "devDependencies": {},
+  "dependencies": {
     "@unocss/preset-uno": "^66.5.4",
     "typescript": "^5.9.3",
-    "unocss": "^66.5.4"
-  },
-  "dependencies": {
+    "unocss": "^66.5.4",
     "ws": "^8.18.3"
   }
 }
