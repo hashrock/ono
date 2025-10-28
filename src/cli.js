@@ -7,9 +7,40 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import http from "node:http";
+import net from "node:net";
 import { bundle } from "./bundler.js";
 import { renderToString } from "./renderer.js";
 import { WebSocketServer } from "ws";
+
+/**
+ * Find an available port starting from the given port
+ * @param {number} startPort - Port to start searching from
+ * @param {number} maxAttempts - Maximum number of ports to try
+ * @returns {Promise<number>} Available port number
+ */
+async function findAvailablePort(startPort, maxAttempts = 10) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const port = startPort + i;
+    try {
+      await new Promise((resolve, reject) => {
+        const server = net.createServer();
+        server.once("error", reject);
+        server.once("listening", () => {
+          server.close();
+          resolve();
+        });
+        server.listen(port);
+      });
+      return port;
+    } catch (err) {
+      if (err.code !== "EADDRINUSE") {
+        throw err;
+      }
+      // Port is in use, try next one
+    }
+  }
+  throw new Error(`Could not find available port in range ${startPort}-${startPort + maxAttempts - 1}`);
+}
 
 /**
  * Build a JSX file to HTML
@@ -17,10 +48,11 @@ import { WebSocketServer } from "ws";
  * @param {object} options - Build options
  * @param {boolean} options.liveReload - Inject live reload script
  * @param {boolean} options.silent - Suppress console output
+ * @param {number} options.wsPort - WebSocket port for live reload
  * @returns {Promise<{outputPath: string, html: string}>}
  */
 async function buildFile(inputFile, options = {}) {
-  const { liveReload = false, silent = false } = options;
+  const { liveReload = false, silent = false, wsPort = 35729 } = options;
   const absolutePath = path.resolve(process.cwd(), inputFile);
 
   if (!silent) {
@@ -82,7 +114,7 @@ ${bundledCode}
     const liveReloadScript = `
 <script>
 (function() {
-  const ws = new WebSocket('ws://localhost:35729');
+  const ws = new WebSocket('ws://localhost:${wsPort}');
   ws.onmessage = function(event) {
     if (event.data === 'reload') {
       console.log('Reloading...');
@@ -200,14 +232,25 @@ Examples:
 
     const inputFile = args[1];
     const portIndex = args.indexOf("--port");
-    const port = portIndex !== -1 && args[portIndex + 1] ? parseInt(args[portIndex + 1]) : 3000;
+    const requestedPort = portIndex !== -1 && args[portIndex + 1] ? parseInt(args[portIndex + 1]) : 3000;
 
     try {
+      // Find available ports
+      const wsPort = await findAvailablePort(35729);
+      const httpPort = await findAvailablePort(requestedPort);
+
+      if (wsPort !== 35729) {
+        console.log(`ℹ️  WebSocket port 35729 is busy, using port ${wsPort} instead`);
+      }
+      if (httpPort !== requestedPort) {
+        console.log(`ℹ️  Port ${requestedPort} is busy, using port ${httpPort} instead`);
+      }
+
       // Initial build with live reload
-      await buildFile(inputFile, { liveReload: true });
+      await buildFile(inputFile, { liveReload: true, wsPort });
 
       // Setup WebSocket server for live reload
-      const wss = new WebSocketServer({ port: 35729 });
+      const wss = new WebSocketServer({ port: wsPort });
       const clients = new Set();
 
       wss.on("connection", (ws) => {
@@ -233,7 +276,7 @@ Examples:
       watch(watchDir, { recursive: true }, async (_eventType, filename) => {
         if (filename && filename.endsWith(".jsx")) {
           try {
-            await buildFile(inputFile, { liveReload: true, silent: true });
+            await buildFile(inputFile, { liveReload: true, silent: true, wsPort });
             console.log(`✓ Rebuilt: ${filename}`);
             notifyClients();
           } catch (error) {
@@ -272,8 +315,8 @@ Examples:
         }
       });
 
-      server.listen(port, () => {
-        console.log(`\n🚀 Server running at http://localhost:${port}`);
+      server.listen(httpPort, () => {
+        console.log(`\n🚀 Server running at http://localhost:${httpPort}`);
         console.log(`📝 Serving: ${outputFile}\n`);
       });
 
