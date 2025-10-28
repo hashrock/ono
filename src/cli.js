@@ -74,6 +74,39 @@ function parseArgs(args) {
 }
 
 /**
+ * Discover all JSX files in the pages directory
+ * @param {string} pagesDir - Path to pages directory
+ * @returns {Promise<string[]>} Array of JSX file paths
+ */
+async function discoverPages(pagesDir) {
+  const pages = [];
+
+  async function walk(dir) {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        await walk(fullPath);
+      } else if (entry.isFile() && entry.name.endsWith(".jsx")) {
+        pages.push(fullPath);
+      }
+    }
+  }
+
+  try {
+    await walk(pagesDir);
+    return pages;
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
+}
+
+/**
  * Build a JSX file to HTML
  * @param {string} inputFile - Path to input JSX file
  * @param {object} options - Build options
@@ -81,10 +114,11 @@ function parseArgs(args) {
  * @param {boolean} options.silent - Suppress console output
  * @param {number} options.wsPort - WebSocket port for live reload
  * @param {string} options.outputDir - Custom output directory
+ * @param {string} options.pagesDir - Pages directory for relative path calculation
  * @returns {Promise<{outputPath: string, html: string}>}
  */
 async function buildFile(inputFile, options = {}) {
-  const { liveReload = false, silent = false, wsPort = 35729, outputDir = "dist" } = options;
+  const { liveReload = false, silent = false, wsPort = 35729, outputDir = "dist", pagesDir = null } = options;
   const absolutePath = path.resolve(process.cwd(), inputFile);
 
   if (!silent) {
@@ -169,11 +203,28 @@ ${bundledCode}
   const outDir = path.resolve(process.cwd(), outputDir);
   await fs.mkdir(outDir, { recursive: true });
 
-  // Output file name (keep the same directory structure but replace .jsx with .html)
-  const inputBasename = path.basename(inputFile, ".jsx");
-  const outputFilename = `${inputBasename}.html`;
-  const outputPath = path.join(outDir, outputFilename);
-  const relativeOutput = path.relative(process.cwd(), outputPath);
+  // Output file name - preserve directory structure if pagesDir is specified
+  let outputPath;
+  let relativeOutput;
+
+  if (pagesDir) {
+    // Preserve the directory structure from pages folder
+    const pagesDirAbs = path.resolve(process.cwd(), pagesDir);
+    const relativePath = path.relative(pagesDirAbs, absolutePath);
+    const outputRelative = relativePath.replace(/\.jsx$/, ".html");
+    outputPath = path.join(outDir, outputRelative);
+
+    // Create subdirectories if needed
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+
+    relativeOutput = path.relative(process.cwd(), outputPath);
+  } else {
+    // Single file mode - just use basename
+    const inputBasename = path.basename(inputFile, ".jsx");
+    const outputFilename = `${inputBasename}.html`;
+    outputPath = path.join(outDir, outputFilename);
+    relativeOutput = path.relative(process.cwd(), outputPath);
+  }
 
   await fs.writeFile(outputPath, fullHtml);
 
@@ -206,8 +257,12 @@ async function main() {
 Mini JSX - A lightweight JSX library for static site generation
 
 Usage:
-  mini-jsx build <file> [options]  Build a JSX file to HTML
-  mini-jsx dev <file> [options]    Start dev server with live reload
+  mini-jsx build <file|dir> [options]  Build JSX file(s) to HTML
+  mini-jsx dev <file|dir> [options]    Start dev server with live reload
+
+Arguments:
+  file                     Single JSX file to build/serve
+  dir                      Pages directory (default: pages/)
 
 Options:
   -w, --watch              Watch for changes and rebuild (build only)
@@ -217,12 +272,20 @@ Options:
   -v, --version            Show version number
 
 Examples:
+  # Single file mode
   mini-jsx build example/index.jsx
   mini-jsx build example/index.jsx --watch
-  mini-jsx build example/index.jsx -o public
   mini-jsx dev example/index.jsx
-  mini-jsx dev example/index.jsx -p 8080
-  mini-jsx dev example/index.jsx --output build
+
+  # Pages mode (build all .jsx files in directory)
+  mini-jsx build pages
+  mini-jsx build pages --watch
+  mini-jsx dev pages
+  mini-jsx dev          # Same as: mini-jsx dev pages
+
+  # Custom options
+  mini-jsx build pages -o public
+  mini-jsx dev pages -p 8080
     `);
     process.exit(0);
   }
@@ -231,48 +294,97 @@ Examples:
   const inputFile = opts._[1];
 
   if (command === "build") {
-    if (!inputFile) {
-      console.error("Error: Please specify a file to build");
-      console.error("Usage: mini-jsx build <file> [options]");
-      process.exit(1);
-    }
-
     const buildOptions = {
       outputDir: opts.output || "dist",
     };
 
     try {
-      if (opts.watch) {
-        // Initial build
-        await buildFile(inputFile, buildOptions);
+      // Check if inputFile is a directory (pages mode)
+      const isDirectory = inputFile && (await fs.stat(path.resolve(process.cwd(), inputFile)).catch(() => null))?.isDirectory();
 
-        // Watch for changes
-        const absolutePath = path.resolve(process.cwd(), inputFile);
-        const watchDir = path.dirname(absolutePath);
+      if (isDirectory || inputFile === "pages" || !inputFile) {
+        // Pages mode - build all pages in directory
+        const pagesDir = inputFile || "pages";
+        const pagesDirAbs = path.resolve(process.cwd(), pagesDir);
 
-        console.log(`\n👀 Watching for changes in ${watchDir}...`);
-        console.log("Press Ctrl+C to stop\n");
+        const pages = await discoverPages(pagesDirAbs);
 
-        const { watch } = await import("node:fs");
-        watch(watchDir, { recursive: true }, async (_eventType, filename) => {
-          if (filename && filename.endsWith(".jsx")) {
-            try {
-              await buildFile(inputFile, { ...buildOptions, silent: true });
-              console.log(`✓ Rebuilt: ${filename}`);
-            } catch (error) {
-              console.error(`✗ Build error: ${error.message}`);
-            }
+        if (pages.length === 0) {
+          console.error(`Error: No JSX files found in ${pagesDir}/`);
+          process.exit(1);
+        }
+
+        console.log(`Found ${pages.length} page(s) in ${pagesDir}/\n`);
+
+        if (opts.watch) {
+          // Initial build all pages
+          for (const page of pages) {
+            await buildFile(page, { ...buildOptions, pagesDir: pagesDirAbs });
           }
-        });
 
-        // Keep process running
-        process.on("SIGINT", () => {
-          console.log("\n\n👋 Shutting down...");
-          process.exit(0);
-        });
+          console.log(`\n👀 Watching for changes in ${pagesDir}/...`);
+          console.log("Press Ctrl+C to stop\n");
+
+          const { watch } = await import("node:fs");
+          watch(pagesDirAbs, { recursive: true }, async (_eventType, filename) => {
+            if (filename && filename.endsWith(".jsx")) {
+              const changedFile = path.join(pagesDirAbs, filename);
+              try {
+                await buildFile(changedFile, { ...buildOptions, pagesDir: pagesDirAbs, silent: true });
+                console.log(`✓ Rebuilt: ${filename}`);
+              } catch (error) {
+                console.error(`✗ Build error: ${error.message}`);
+              }
+            }
+          });
+
+          process.on("SIGINT", () => {
+            console.log("\n\n👋 Shutting down...");
+            process.exit(0);
+          });
+        } else {
+          // Build all pages
+          for (const page of pages) {
+            await buildFile(page, { ...buildOptions, pagesDir: pagesDirAbs });
+          }
+        }
+      } else if (inputFile) {
+        // Single file mode
+        if (opts.watch) {
+          // Initial build
+          await buildFile(inputFile, buildOptions);
+
+          // Watch for changes
+          const absolutePath = path.resolve(process.cwd(), inputFile);
+          const watchDir = path.dirname(absolutePath);
+
+          console.log(`\n👀 Watching for changes in ${watchDir}...`);
+          console.log("Press Ctrl+C to stop\n");
+
+          const { watch } = await import("node:fs");
+          watch(watchDir, { recursive: true }, async (_eventType, filename) => {
+            if (filename && filename.endsWith(".jsx")) {
+              try {
+                await buildFile(inputFile, { ...buildOptions, silent: true });
+                console.log(`✓ Rebuilt: ${filename}`);
+              } catch (error) {
+                console.error(`✗ Build error: ${error.message}`);
+              }
+            }
+          });
+
+          process.on("SIGINT", () => {
+            console.log("\n\n👋 Shutting down...");
+            process.exit(0);
+          });
+        } else {
+          // Single build
+          await buildFile(inputFile, buildOptions);
+        }
       } else {
-        // Single build
-        await buildFile(inputFile, buildOptions);
+        console.error("Error: Please specify a file or pages directory to build");
+        console.error("Usage: mini-jsx build <file|pages> [options]");
+        process.exit(1);
       }
     } catch (error) {
       console.error(`Error: ${error.message}`);
@@ -282,16 +394,14 @@ Examples:
       process.exit(1);
     }
   } else if (command === "dev") {
-    if (!inputFile) {
-      console.error("Error: Please specify a file to serve");
-      console.error("Usage: mini-jsx dev <file> [options]");
-      process.exit(1);
-    }
-
     const requestedPort = opts.port || 3000;
     const outputDir = opts.output || "dist";
 
     try {
+      // Check if inputFile is a directory (pages mode)
+      const isDirectory = inputFile && (await fs.stat(path.resolve(process.cwd(), inputFile)).catch(() => null))?.isDirectory();
+      const isPages = isDirectory || inputFile === "pages" || !inputFile;
+
       // Find available ports
       const wsPort = await findAvailablePort(35729);
       const httpPort = await findAvailablePort(requestedPort);
@@ -303,80 +413,174 @@ Examples:
         console.log(`ℹ️  Port ${requestedPort} is busy, using port ${httpPort} instead`);
       }
 
-      // Initial build with live reload
-      await buildFile(inputFile, { liveReload: true, wsPort, outputDir });
+      if (isPages) {
+        // Pages mode
+        const pagesDir = inputFile || "pages";
+        const pagesDirAbs = path.resolve(process.cwd(), pagesDir);
+        const pages = await discoverPages(pagesDirAbs);
 
-      // Setup WebSocket server for live reload
-      const wss = new WebSocketServer({ port: wsPort });
-      const clients = new Set();
+        if (pages.length === 0) {
+          console.error(`Error: No JSX files found in ${pagesDir}/`);
+          process.exit(1);
+        }
 
-      wss.on("connection", (ws) => {
-        clients.add(ws);
-        ws.on("close", () => clients.delete(ws));
-      });
+        console.log(`Found ${pages.length} page(s) in ${pagesDir}/\n`);
 
-      function notifyClients() {
-        clients.forEach((client) => {
-          if (client.readyState === 1) {
-            client.send("reload");
+        // Initial build all pages
+        for (const page of pages) {
+          await buildFile(page, { liveReload: true, wsPort, outputDir, pagesDir: pagesDirAbs });
+        }
+
+        // Setup WebSocket server
+        const wss = new WebSocketServer({ port: wsPort });
+        const clients = new Set();
+
+        wss.on("connection", (ws) => {
+          clients.add(ws);
+          ws.on("close", () => clients.delete(ws));
+        });
+
+        function notifyClients() {
+          clients.forEach((client) => {
+            if (client.readyState === 1) {
+              client.send("reload");
+            }
+          });
+        }
+
+        // Watch for changes
+        console.log(`\n👀 Watching for changes in ${pagesDir}/...`);
+
+        const { watch } = await import("node:fs");
+        watch(pagesDirAbs, { recursive: true }, async (_eventType, filename) => {
+          if (filename && filename.endsWith(".jsx")) {
+            const changedFile = path.join(pagesDirAbs, filename);
+            try {
+              await buildFile(changedFile, { liveReload: true, silent: true, wsPort, outputDir, pagesDir: pagesDirAbs });
+              console.log(`✓ Rebuilt: ${filename}`);
+              notifyClients();
+            } catch (error) {
+              console.error(`✗ Build error: ${error.message}`);
+            }
           }
         });
-      }
 
-      // Watch for changes
-      const absolutePath = path.resolve(process.cwd(), inputFile);
-      const watchDir = path.dirname(absolutePath);
+        // Create HTTP server
+        const outDir = path.resolve(process.cwd(), outputDir);
 
-      console.log(`\n👀 Watching for changes in ${watchDir}...`);
+        const server = http.createServer(async (req, res) => {
+          let requestPath = req.url === "/" ? "/index.html" : req.url;
+          let filePath = path.join(outDir, requestPath);
 
-      const { watch } = await import("node:fs");
-      watch(watchDir, { recursive: true }, async (_eventType, filename) => {
-        if (filename && filename.endsWith(".jsx")) {
           try {
-            await buildFile(inputFile, { liveReload: true, silent: true, wsPort, outputDir });
-            console.log(`✓ Rebuilt: ${filename}`);
-            notifyClients();
+            const content = await fs.readFile(filePath);
+            const ext = path.extname(filePath);
+            const contentTypes = {
+              ".html": "text/html",
+              ".css": "text/css",
+              ".js": "text/javascript",
+              ".json": "application/json",
+              ".png": "image/png",
+              ".jpg": "image/jpeg",
+              ".gif": "image/gif",
+              ".svg": "image/svg+xml",
+            };
+
+            res.writeHead(200, { "Content-Type": contentTypes[ext] || "text/plain" });
+            res.end(content);
           } catch (error) {
-            console.error(`✗ Build error: ${error.message}`);
+            res.writeHead(404);
+            res.end("Not found");
           }
+        });
+
+        server.listen(httpPort, () => {
+          console.log(`\n🚀 Server running at http://localhost:${httpPort}`);
+          console.log(`📝 Serving: ${pagesDir}/ → ${outputDir}/\n`);
+        });
+      } else {
+        // Single file mode
+        if (!inputFile) {
+          console.error("Error: Please specify a file or pages directory to serve");
+          console.error("Usage: mini-jsx dev <file|pages> [options]");
+          process.exit(1);
         }
-      });
 
-      // Create HTTP server
-      const outDir = path.resolve(process.cwd(), outputDir);
-      const inputBasename = path.basename(inputFile, ".jsx");
-      const outputFilename = `${inputBasename}.html`;
-      const relativeOutput = path.relative(process.cwd(), path.join(outDir, outputFilename));
+        // Initial build with live reload
+        await buildFile(inputFile, { liveReload: true, wsPort, outputDir });
 
-      const server = http.createServer(async (req, res) => {
-        let filePath = path.join(outDir, req.url === "/" ? outputFilename : req.url);
+        // Setup WebSocket server for live reload
+        const wss = new WebSocketServer({ port: wsPort });
+        const clients = new Set();
 
-        try {
-          const content = await fs.readFile(filePath);
-          const ext = path.extname(filePath);
-          const contentTypes = {
-            ".html": "text/html",
-            ".css": "text/css",
-            ".js": "text/javascript",
-            ".json": "application/json",
-            ".png": "image/png",
-            ".jpg": "image/jpeg",
-            ".gif": "image/gif",
-            ".svg": "image/svg+xml",
-          };
+        wss.on("connection", (ws) => {
+          clients.add(ws);
+          ws.on("close", () => clients.delete(ws));
+        });
 
-          res.writeHead(200, { "Content-Type": contentTypes[ext] || "text/plain" });
-          res.end(content);
-        } catch (error) {
-          res.writeHead(404);
-          res.end("Not found");
+        function notifyClients() {
+          clients.forEach((client) => {
+            if (client.readyState === 1) {
+              client.send("reload");
+            }
+          });
         }
-      });
 
-      server.listen(httpPort, () => {
-        console.log(`\n🚀 Server running at http://localhost:${httpPort}`);
-        console.log(`📝 Serving: ${relativeOutput}\n`);
-      });
+        // Watch for changes
+        const absolutePath = path.resolve(process.cwd(), inputFile);
+        const watchDir = path.dirname(absolutePath);
+
+        console.log(`\n👀 Watching for changes in ${watchDir}...`);
+
+        const { watch } = await import("node:fs");
+        watch(watchDir, { recursive: true }, async (_eventType, filename) => {
+          if (filename && filename.endsWith(".jsx")) {
+            try {
+              await buildFile(inputFile, { liveReload: true, silent: true, wsPort, outputDir });
+              console.log(`✓ Rebuilt: ${filename}`);
+              notifyClients();
+            } catch (error) {
+              console.error(`✗ Build error: ${error.message}`);
+            }
+          }
+        });
+
+        // Create HTTP server
+        const outDir = path.resolve(process.cwd(), outputDir);
+        const inputBasename = path.basename(inputFile, ".jsx");
+        const outputFilename = `${inputBasename}.html`;
+        const relativeOutput = path.relative(process.cwd(), path.join(outDir, outputFilename));
+
+        const server = http.createServer(async (req, res) => {
+          let filePath = path.join(outDir, req.url === "/" ? outputFilename : req.url);
+
+          try {
+            const content = await fs.readFile(filePath);
+            const ext = path.extname(filePath);
+            const contentTypes = {
+              ".html": "text/html",
+              ".css": "text/css",
+              ".js": "text/javascript",
+              ".json": "application/json",
+              ".png": "image/png",
+              ".jpg": "image/jpeg",
+              ".gif": "image/gif",
+              ".svg": "image/svg+xml",
+            };
+
+            res.writeHead(200, { "Content-Type": contentTypes[ext] || "text/plain" });
+            res.end(content);
+          } catch (error) {
+            res.writeHead(404);
+            res.end("Not found");
+          }
+        });
+
+        server.listen(httpPort, () => {
+          console.log(`\n🚀 Server running at http://localhost:${httpPort}`);
+          console.log(`📝 Serving: ${relativeOutput}\n`);
+        });
+      }
 
       // Keep process running
       process.on("SIGINT", () => {
