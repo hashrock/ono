@@ -2,7 +2,7 @@
  * Transformer - Convert JSX to JavaScript using TypeScript compiler
  */
 
-import ts from "typescript";
+import ts from "typescript/lib/typescript.js";
 
 /**
  * Transform JSX code to JavaScript
