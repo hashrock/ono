@@ -46,9 +46,32 @@ Example:
       const bundledCode = await bundle(absolutePath);
 
       // Create a temporary module to execute
-      // We need to inject our runtime
+      // We need to inject our runtime inline (no external dependencies)
       const codeWithRuntime = `
-import { createElement as h } from "${path.resolve(process.cwd(), "src/jsx-runtime.js")}";
+// Inline JSX Runtime - No external dependencies required
+function flattenChildren(children) {
+  const result = [];
+  for (const child of children) {
+    if (child === null || child === undefined || typeof child === 'boolean') {
+      continue;
+    }
+    if (Array.isArray(child)) {
+      result.push(...flattenChildren(child));
+    } else {
+      result.push(child);
+    }
+  }
+  return result;
+}
+
+function h(tag, props, ...children) {
+  return {
+    tag,
+    props: props || {},
+    children: flattenChildren(children)
+  };
+}
+
 ${bundledCode}
 `;
 
