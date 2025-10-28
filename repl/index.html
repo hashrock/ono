@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ono REPL - Browser-based JSX Playground</title>
-  <script src="https://cdn.jsdelivr.net/npm/typescript@5.9.3/lib/typescript.min.js"></script>
+  <title>Ono REPL - Worker-powered JSX Playground</title>
   <style>
     * {
       margin: 0;
@@ -146,6 +145,10 @@
       background: #3a1515;
     }
 
+    .status.processing {
+      color: #4ec9b0;
+    }
+
     @media (max-width: 768px) {
       .container {
         grid-template-columns: 1fr;
@@ -158,9 +161,9 @@
   <header>
     <div style="display: flex; align-items: center;">
       <h1>Ono REPL</h1>
-      <span class="tagline">Browser-based JSX Playground</span>
+      <span class="tagline">Worker-powered JSX Playground</span>
     </div>
-    <button onclick="runCode()">Run (⌘/Ctrl+Enter)</button>
+    <button id="runBtn">Run (⌘/Ctrl+Enter)</button>
   </header>
 
   <div class="container">
@@ -168,9 +171,9 @@
       <div class="panel-header">
         <span>JSX Editor</span>
         <div class="examples">
-          <button class="example-btn" onclick="loadExample('hello')">Hello World</button>
-          <button class="example-btn" onclick="loadExample('component')">Component</button>
-          <button class="example-btn" onclick="loadExample('list')">List</button>
+          <button class="example-btn" data-example="hello">Hello World</button>
+          <button class="example-btn" data-example="component">Component</button>
+          <button class="example-btn" data-example="list">List</button>
         </div>
       </div>
       <div class="editor-container">
@@ -188,220 +191,8 @@
     </div>
   </div>
 
-  <div class="status" id="status">Ready</div>
+  <div class="status" id="status">Ready • Ono compiler running in Web Worker</div>
 
-  <script type="module">
-    // Minimal JSX runtime for browser
-    function h(type, props, ...children) {
-      if (typeof type === 'function') {
-        return type({ ...props, children: children.flat() });
-      }
-
-      const flatChildren = children.flat(Infinity).filter(child =>
-        child !== null && child !== undefined && child !== false
-      );
-
-      return { type, props: props || {}, children: flatChildren };
-    }
-
-    function renderToString(vnode) {
-      if (vnode === null || vnode === undefined || vnode === false) {
-        return '';
-      }
-
-      if (typeof vnode === 'string' || typeof vnode === 'number') {
-        return String(vnode);
-      }
-
-      if (Array.isArray(vnode)) {
-        return vnode.map(renderToString).join('');
-      }
-
-      const { type, props, children } = vnode;
-      const attrs = Object.entries(props || {})
-        .filter(([key]) => key !== 'children')
-        .map(([key, value]) => {
-          if (key === 'className') key = 'class';
-          if (typeof value === 'boolean') {
-            return value ? key : '';
-          }
-          return key + '="' + String(value).replace(/"/g, '&quot;') + '"';
-        })
-        .filter(Boolean)
-        .join(' ');
-
-      const attrsStr = attrs ? ' ' + attrs : '';
-
-      const selfClosing = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
-      if (selfClosing.includes(type)) {
-        return '<' + type + attrsStr + ' />';
-      }
-
-      const childrenStr = (children || []).map(renderToString).join('');
-
-      return '<' + type + attrsStr + '>' + childrenStr + '</' + type + '>';
-    }
-
-    // Examples - using simple function component pattern
-    const examples = {
-      hello: `function App() {
-  return (
-    <div style="padding: 2rem; font-family: sans-serif;">
-      <h1 style="color: #0e639c;">Hello, Ono!</h1>
-      <p>This is a browser-based JSX playground powered by TypeScript.</p>
-      <p>Edit the code and press Run to see the results.</p>
-    </div>
-  );
-}
-
-App()`,
-
-      component: `function Card(props) {
-  return (
-    <div style="border: 2px solid #ddd; border-radius: 8px; padding: 1.5rem; margin: 1rem; max-width: 400px;">
-      <h2 style="margin: 0 0 1rem 0; color: #333;">{props.title}</h2>
-      <div>{props.children}</div>
-    </div>
-  );
-}
-
-function App() {
-  return (
-    <div style="padding: 2rem; font-family: sans-serif;">
-      <Card title="Welcome to Ono">
-        <p>A lightweight JSX library for static site generation.</p>
-      </Card>
-      <Card title="Features">
-        <ul>
-          <li>Minimal dependencies</li>
-          <li>Browser-based REPL</li>
-          <li>TypeScript JSX transform</li>
-        </ul>
-      </Card>
-    </div>
-  );
-}
-
-App()`,
-
-      list: `function TodoItem(props) {
-  const bgColor = props.done ? '#e7f5e7' : '#fff';
-  const textDecor = props.done ? 'line-through' : 'none';
-  const itemStyle = "padding: 1rem; margin: 0.5rem 0; background: " + bgColor + "; border: 1px solid #ddd; border-radius: 4px; text-decoration: " + textDecor + ";";
-
-  return (
-    <li style={itemStyle}>
-      {props.text}
-    </li>
-  );
-}
-
-function TodoList() {
-  const todos = [
-    { id: 1, text: 'Learn Ono', done: true },
-    { id: 2, text: 'Build a static site', done: false },
-    { id: 3, text: 'Deploy to production', done: false }
-  ];
-
-  return (
-    <div style="padding: 2rem; font-family: sans-serif; max-width: 500px;">
-      <h1 style="color: #0e639c;">Todo List</h1>
-      <ul style="list-style: none; padding: 0;">
-        {todos.map(todo => (
-          <TodoItem key={todo.id} text={todo.text} done={todo.done} />
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-TodoList()`
-    };
-
-    // Transform JSX to JavaScript using TypeScript
-    function transformJSX(source) {
-      const compilerOptions = {
-        jsx: ts.JsxEmit.React,
-        jsxFactory: 'h',
-        module: ts.ModuleKind.ESNext,
-        target: ts.ScriptTarget.ESNext,
-      };
-
-      const result = ts.transpileModule(source, {
-        compilerOptions,
-        fileName: 'input.tsx',
-      });
-
-      return result.outputText;
-    }
-
-    // Run the code
-    window.runCode = function() {
-      const editor = document.getElementById('editor');
-      const preview = document.getElementById('preview');
-      const status = document.getElementById('status');
-
-      try {
-        status.textContent = 'Transforming JSX...';
-        status.className = 'status';
-
-        const jsxCode = editor.value;
-        const jsCode = transformJSX(jsxCode);
-
-        status.textContent = 'Rendering...';
-
-        // Execute the transformed code and capture the last expression
-        let vnode;
-        const wrappedCode = '(function(h, renderToString) {\nlet __result;\n' +
-          jsCode.replace(/\n([^;\n]+);?\s*$/, '\n__result = $1;') +
-          '\nreturn __result;\n})';
-        const runCode = eval(wrappedCode);
-
-        // Execute and get the result
-        vnode = runCode(h, renderToString);
-        const html = renderToString(vnode);
-
-        // Render in iframe
-        const doc = preview.contentDocument || preview.contentWindow.document;
-        doc.open();
-        doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { margin: 0; padding: 0; } * { box-sizing: border-box; }</style></head><body>' + html + '</body></html>');
-        doc.close();
-
-        status.textContent = 'Success! ✓';
-        status.className = 'status';
-      } catch (error) {
-        status.textContent = 'Error: ' + error.message;
-        status.className = 'status error';
-        console.error(error);
-      }
-    };
-
-    // Load example
-    window.loadExample = function(name) {
-      document.getElementById('editor').value = examples[name];
-      runCode();
-    };
-
-    // Keyboard shortcut
-    document.getElementById('editor').addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        runCode();
-      }
-
-      // Tab support
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        const start = e.target.selectionStart;
-        const end = e.target.selectionEnd;
-        const value = e.target.value;
-        e.target.value = value.substring(0, start) + '  ' + value.substring(end);
-        e.target.selectionStart = e.target.selectionEnd = start + 2;
-      }
-    });
-
-    // Initialize with hello example
-    loadExample('hello');
-  </script>
+  <script type="module" src="/main.js"></script>
 </body>
 </html>
