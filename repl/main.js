@@ -34,10 +34,23 @@ const examples = {
   hello: {
     'index.jsx': `function App() {
   return (
-    <div style="padding: 2rem; font-family: sans-serif;">
-      <h1 style="color: #0e639c;">Hello, Ono!</h1>
-      <p>This JSX is compiled by Ono in a Web Worker!</p>
-      <p>Try the multi-file examples to see imports in action.</p>
+    <div class="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col items-center justify-center gap-6">
+      <div class="space-y-4 text-center">
+        <span class="uppercase text-xs tracking-widest text-slate-400">Ono + UnoCSS</span>
+        <h1 class="text-4xl font-bold text-emerald-400 drop-shadow-md">Hello, Ono!</h1>
+        <p class="text-slate-300 max-w-lg">
+          UnoCSS utilities are generated automatically inside the REPL worker.
+          Edit the JSX and watch the preview update instantly.
+        </p>
+      </div>
+      <div class="flex gap-3">
+        <button class="px-4 py-2 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-500/30 transition">
+          Button
+        </button>
+        <button class="px-4 py-2 rounded-md bg-slate-800 border border-slate-700 hover:bg-slate-700 transition">
+          Secondary
+        </button>
+      </div>
     </div>
   );
 }
@@ -48,9 +61,9 @@ App()`
   multifile: {
     'components/Card.jsx': `export function Card(props) {
   return (
-    <div style="border: 2px solid #ddd; border-radius: 8px; padding: 1.5rem; margin: 1rem; max-width: 400px;">
-      <h2 style="margin: 0 0 1rem 0; color: #333;">{props.title}</h2>
-      <div>{props.children}</div>
+    <div class="bg-white/5 border border-white/10 rounded-xl p-6 shadow-xl max-w-sm backdrop-blur-md hover:border-emerald-400/40 transition-colors">
+      <h2 class="text-xl font-semibold text-white mb-2">{props.title}</h2>
+      <div class="text-slate-200 text-sm leading-relaxed">{props.children}</div>
     </div>
   );
 }`,
@@ -58,15 +71,26 @@ App()`
 
 function App() {
   return (
-    <div style="padding: 2rem; font-family: sans-serif;">
-      <h1 style="color: #0e639c;">Multi-file Example</h1>
-      <Card title="Component from another file">
-        <p>This Card component is imported from components/Card.jsx</p>
-      </Card>
-      <Card title="How it works">
-        <p>The REPL bundles all files together</p>
-        <p>You can use ES6 imports between files</p>
-      </Card>
+    <div class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 font-sans">
+      <header class="px-8 py-10 border-b border-white/10 backdrop-blur-md">
+        <h1 class="text-3xl font-bold text-emerald-400">Multi-file Example</h1>
+        <p class="text-slate-300 mt-2 max-w-2xl">
+          This project demonstrates sharing components across files while UnoCSS extracts class utilities on the fly.
+        </p>
+      </header>
+      <main class="px-6 sm:px-10 py-10 grid gap-6 sm:grid-cols-2">
+        <Card title="Component from another file">
+          <p>Card component is imported from <code class="bg-black/40 px-1.5 py-0.5 rounded text-emerald-300">components/Card.jsx</code>.</p>
+          <p class="mt-2">Edit the component to see UnoCSS generate new styles.</p>
+        </Card>
+        <Card title="Dynamic Styles">
+          <ul class="list-disc list-inside space-y-1 text-slate-200/80">
+            <li>Gradient background</li>
+            <li>Glassmorphism cards</li>
+            <li>Hover transitions</li>
+          </ul>
+        </Card>
+      </main>
     </div>
   );
 }
@@ -77,31 +101,36 @@ App()`
   blog: {
     'components/Layout.jsx': `export function Layout(props) {
   return (
-    <html lang="en">
+    <html lang="en" class="dark">
       <head>
         <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{props.title}</title>
-        <style>{\`
-          body { margin: 0; font-family: sans-serif; }
-          nav { background: #0e639c; padding: 1rem 2rem; color: white; }
-          main { max-width: 800px; margin: 2rem auto; padding: 0 2rem; }
-        \`}</style>
       </head>
-      <body>
-        <nav>
-          <h1>{props.title}</h1>
+      <body class="bg-slate-950 text-slate-100 font-sans">
+        <nav class="bg-slate-900/70 border-b border-slate-800/70 backdrop-blur py-5">
+          <div class="max-w-4xl mx-auto px-6 flex items-center justify-between">
+            <h1 class="text-2xl font-semibold text-emerald-300">{props.title}</h1>
+            <span class="text-xs uppercase tracking-[0.3em] text-slate-400">Powered by Ono</span>
+          </div>
         </nav>
-        <main>{props.children}</main>
+        <main class="max-w-3xl mx-auto px-6 py-10 space-y-12">{props.children}</main>
       </body>
     </html>
   );
 }`,
     'components/Post.jsx': `export function Post(props) {
   return (
-    <article style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #ddd;">
-      <h2 style="color: #333;">{props.title}</h2>
-      <p style="color: #666; font-size: 0.875rem;">{props.date}</p>
-      <div>{props.children}</div>
+    <article class="border border-slate-800/60 rounded-2xl p-8 bg-slate-900/60 backdrop-blur">
+      <header class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
+        <h2 class="text-xl font-semibold text-white">{props.title}</h2>
+        <span class="text-xs uppercase tracking-[0.3em] text-emerald-300/80">
+          {props.date}
+        </span>
+      </header>
+      <div class="space-y-3 text-slate-200 leading-relaxed text-sm">
+        {props.children}
+      </div>
     </article>
   );
 }`,
@@ -112,12 +141,24 @@ function App() {
   return (
     <Layout title="My Blog">
       <Post title="Getting Started with Ono" date="2025-10-28">
-        <p>Ono is a minimalist SSG framework with JSX, powered by TypeScript's JSX transformer.</p>
-        <p>This example shows how you can create a blog with multiple components!</p>
+        <p>
+          Ono is a minimalist SSG framework with JSX, powered by TypeScript's JSX transformer.
+          UnoCSS keeps the styles atomic and fast, even in the browser.
+        </p>
+        <p>
+          Edit this blog to experiment with typography utilities like
+          <code class="px-1 py-0.5 rounded bg-emerald-400/10 text-emerald-300">font-semibold</code>,
+          <code class="px-1 py-0.5 rounded bg-emerald-400/10 text-emerald-300">tracking-wide</code>,
+          or <code class="px-1 py-0.5 rounded bg-emerald-400/10 text-emerald-300">prose</code>.
+        </p>
       </Post>
       <Post title="Multi-file Projects" date="2025-10-29">
-        <p>The REPL supports multiple files with imports.</p>
-        <p>Create components in separate files and import them as needed.</p>
+        <p>
+          The REPL supports multiple files with imports, and UnoCSS sees every component in the project.
+        </p>
+        <p>
+          Try adding new utility classes, then watch the compiled CSS show up in the status bar.
+        </p>
       </Post>
     </Layout>
   );
@@ -129,20 +170,20 @@ App()`
 
 // Handle worker messages
 worker.onmessage = (e) => {
-  const { type, html, error, stack, id } = e.data;
+  const { type, html, css, error, stack, id } = e.data;
 
   if (id !== currentRequestId) {
     return;
   }
 
   if (type === 'success') {
-    // Render HTML in iframe
-    const doc = preview.contentDocument || preview.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
+    renderPreview(html, css);
 
-    status.textContent = 'Success! ✓ Compiled ' + Object.keys(files).length + ' file(s) in Worker';
+    const cssDetails = css && css.trim().length
+      ? ` • UnoCSS generated ${css.length} characters`
+      : '';
+
+    status.textContent = 'Success! ✓ Compiled ' + Object.keys(files).length + ' file(s) in Worker' + cssDetails;
     status.className = 'status';
   } else if (type === 'error') {
     status.textContent = 'Error: ' + error;
@@ -189,6 +230,43 @@ function updateUI() {
 
     editorContainer.appendChild(editor);
   });
+}
+
+function renderPreview(html, css) {
+  const doc = preview.contentDocument || preview.contentWindow.document;
+  const finalHtml = integrateUnoCSS(html, css);
+  doc.open();
+  doc.write(finalHtml);
+  doc.close();
+}
+
+function integrateUnoCSS(html, css) {
+  const trimmedCSS = (css || '').trim();
+  if (!trimmedCSS) {
+    return normalizeHtml(html);
+  }
+
+  const styleTag = `<style id="uno-css">${trimmedCSS}</style>`;
+
+  if (!/<html[\s>]/i.test(html)) {
+    return `<!DOCTYPE html><html><head><meta charset="utf-8">${styleTag}</head><body>${html}</body></html>`;
+  }
+
+  if (/<head[\s>]/i.test(html)) {
+    if (/<\/head>/i.test(html)) {
+      return html.replace(/<\/head>/i, `${styleTag}</head>`);
+    }
+    return html.replace(/<head([^>]*)>/i, `<head$1>${styleTag}`);
+  }
+
+  return html.replace(/<html([^>]*)>/i, `<html$1><head>${styleTag}</head>`);
+}
+
+function normalizeHtml(html) {
+  if (/<html[\s>]/i.test(html)) {
+    return html;
+  }
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`;
 }
 
 function handleEditorKeydown(e) {

@@ -2,6 +2,8 @@
 import { transformJSX } from '@ono/transformer.js';
 import { renderToString } from '@ono/renderer.js';
 import { h } from '@ono/jsx-runtime.js';
+import { createGenerator } from '@unocss/core';
+import { presetUno } from '@unocss/preset-uno';
 
 function resolveImport(from, to) {
   if (to.startsWith('./') || to.startsWith('../')) {
@@ -179,7 +181,7 @@ __modules['${filename}'] = (() => {
   return bundledCode;
 }
 
-self.onmessage = (event) => {
+self.onmessage = async (event) => {
   const { type, files, entryPoint, id } = event.data;
   if (type !== 'compile') {
     return;
@@ -236,10 +238,15 @@ self.onmessage = (event) => {
     }
 
     const html = renderToString(vnode);
+    const uno = await createGenerator({
+      presets: [presetUno()],
+    });
+    const { css } = await uno.generate(html, { preflights: true });
 
     self.postMessage({
       type: 'success',
       html,
+      css,
       id,
     });
   } catch (error) {
