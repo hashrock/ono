@@ -11,9 +11,14 @@
     "test": "node --test test/**/*.test.js",
     "test:watch": "node --test --watch test/**/*.test.js"
   },
-  "keywords": ["jsx", "ssg", "static-site-generator"],
+  "keywords": [
+    "jsx",
+    "ssg",
+    "static-site-generator"
+  ],
   "author": "",
   "license": "MIT",
-  "devDependencies": {},
-  "dependencies": {}
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
 }
