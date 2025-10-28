@@ -43,16 +43,48 @@ async function findAvailablePort(startPort, maxAttempts = 10) {
 }
 
 /**
+ * Parse command line arguments into options object
+ * @param {string[]} args - Command line arguments
+ * @returns {object} Parsed options
+ */
+function parseArgs(args) {
+  const options = {
+    _: [], // Positional arguments
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+
+    if (arg === "--watch" || arg === "-w") {
+      options.watch = true;
+    } else if (arg === "--port" || arg === "-p") {
+      options.port = parseInt(args[++i]);
+    } else if (arg === "--output" || arg === "-o") {
+      options.output = args[++i];
+    } else if (arg === "--help" || arg === "-h") {
+      options.help = true;
+    } else if (arg === "--version" || arg === "-v") {
+      options.version = true;
+    } else if (!arg.startsWith("-")) {
+      options._.push(arg);
+    }
+  }
+
+  return options;
+}
+
+/**
  * Build a JSX file to HTML
  * @param {string} inputFile - Path to input JSX file
  * @param {object} options - Build options
  * @param {boolean} options.liveReload - Inject live reload script
  * @param {boolean} options.silent - Suppress console output
  * @param {number} options.wsPort - WebSocket port for live reload
+ * @param {string} options.outputDir - Custom output directory
  * @returns {Promise<{outputPath: string, html: string}>}
  */
 async function buildFile(inputFile, options = {}) {
-  const { liveReload = false, silent = false, wsPort = 35729 } = options;
+  const { liveReload = false, silent = false, wsPort = 35729, outputDir = "dist" } = options;
   const absolutePath = path.resolve(process.cwd(), inputFile);
 
   if (!silent) {
@@ -133,9 +165,15 @@ ${bundledCode}
   // Add DOCTYPE
   const fullHtml = `<!DOCTYPE html>\n${html}`;
 
-  // Output file name (replace .jsx with .html)
-  const outputFile = inputFile.replace(/\.jsx$/, ".html");
-  const outputPath = path.resolve(process.cwd(), outputFile);
+  // Output to specified directory
+  const outDir = path.resolve(process.cwd(), outputDir);
+  await fs.mkdir(outDir, { recursive: true });
+
+  // Output file name (keep the same directory structure but replace .jsx with .html)
+  const inputBasename = path.basename(inputFile, ".jsx");
+  const outputFilename = `${inputBasename}.html`;
+  const outputPath = path.join(outDir, outputFilename);
+  const relativeOutput = path.relative(process.cwd(), outputPath);
 
   await fs.writeFile(outputPath, fullHtml);
 
@@ -143,7 +181,7 @@ ${bundledCode}
   await fs.unlink(tmpFile);
 
   if (!silent) {
-    console.log(`✓ Built successfully: ${outputFile}`);
+    console.log(`✓ Built successfully: ${relativeOutput}`);
   }
 
   return { outputPath, html: fullHtml };
@@ -151,42 +189,62 @@ ${bundledCode}
 
 async function main() {
   const args = process.argv.slice(2);
+  const opts = parseArgs(args);
 
-  if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
+  // Show version
+  if (opts.version) {
+    const pkg = JSON.parse(
+      await fs.readFile(new URL("../package.json", import.meta.url), "utf-8")
+    );
+    console.log(`mini-jsx v${pkg.version}`);
+    process.exit(0);
+  }
+
+  // Show help
+  if (args.length === 0 || opts.help) {
     console.log(`
 Mini JSX - A lightweight JSX library for static site generation
 
 Usage:
-  mini-jsx build <file>         Build a JSX file to HTML
-  mini-jsx build <file> --watch Watch for changes and rebuild
-  mini-jsx dev <file>           Start dev server with live reload
-  mini-jsx --help               Show this help message
+  mini-jsx build <file> [options]  Build a JSX file to HTML
+  mini-jsx dev <file> [options]    Start dev server with live reload
+
+Options:
+  -w, --watch              Watch for changes and rebuild (build only)
+  -p, --port <port>        Port number (default: 3000) (dev only)
+  -o, --output <dir>       Output directory (default: dist)
+  -h, --help               Show this help message
+  -v, --version            Show version number
 
 Examples:
   mini-jsx build example/index.jsx
   mini-jsx build example/index.jsx --watch
+  mini-jsx build example/index.jsx -o public
   mini-jsx dev example/index.jsx
-  mini-jsx dev example/index.jsx --port 3000
+  mini-jsx dev example/index.jsx -p 8080
+  mini-jsx dev example/index.jsx --output build
     `);
     process.exit(0);
   }
 
-  const command = args[0];
+  const command = opts._[0];
+  const inputFile = opts._[1];
 
   if (command === "build") {
-    if (args.length < 2) {
+    if (!inputFile) {
       console.error("Error: Please specify a file to build");
-      console.error("Usage: mini-jsx build <file>");
+      console.error("Usage: mini-jsx build <file> [options]");
       process.exit(1);
     }
 
-    const inputFile = args[1];
-    const watchMode = args.includes("--watch");
+    const buildOptions = {
+      outputDir: opts.output || "dist",
+    };
 
     try {
-      if (watchMode) {
+      if (opts.watch) {
         // Initial build
-        await buildFile(inputFile);
+        await buildFile(inputFile, buildOptions);
 
         // Watch for changes
         const absolutePath = path.resolve(process.cwd(), inputFile);
@@ -199,7 +257,7 @@ Examples:
         watch(watchDir, { recursive: true }, async (_eventType, filename) => {
           if (filename && filename.endsWith(".jsx")) {
             try {
-              await buildFile(inputFile, { silent: true });
+              await buildFile(inputFile, { ...buildOptions, silent: true });
               console.log(`✓ Rebuilt: ${filename}`);
             } catch (error) {
               console.error(`✗ Build error: ${error.message}`);
@@ -214,7 +272,7 @@ Examples:
         });
       } else {
         // Single build
-        await buildFile(inputFile);
+        await buildFile(inputFile, buildOptions);
       }
     } catch (error) {
       console.error(`Error: ${error.message}`);
@@ -224,15 +282,14 @@ Examples:
       process.exit(1);
     }
   } else if (command === "dev") {
-    if (args.length < 2) {
+    if (!inputFile) {
       console.error("Error: Please specify a file to serve");
-      console.error("Usage: mini-jsx dev <file>");
+      console.error("Usage: mini-jsx dev <file> [options]");
       process.exit(1);
     }
 
-    const inputFile = args[1];
-    const portIndex = args.indexOf("--port");
-    const requestedPort = portIndex !== -1 && args[portIndex + 1] ? parseInt(args[portIndex + 1]) : 3000;
+    const requestedPort = opts.port || 3000;
+    const outputDir = opts.output || "dist";
 
     try {
       // Find available ports
@@ -247,7 +304,7 @@ Examples:
       }
 
       // Initial build with live reload
-      await buildFile(inputFile, { liveReload: true, wsPort });
+      await buildFile(inputFile, { liveReload: true, wsPort, outputDir });
 
       // Setup WebSocket server for live reload
       const wss = new WebSocketServer({ port: wsPort });
@@ -276,7 +333,7 @@ Examples:
       watch(watchDir, { recursive: true }, async (_eventType, filename) => {
         if (filename && filename.endsWith(".jsx")) {
           try {
-            await buildFile(inputFile, { liveReload: true, silent: true, wsPort });
+            await buildFile(inputFile, { liveReload: true, silent: true, wsPort, outputDir });
             console.log(`✓ Rebuilt: ${filename}`);
             notifyClients();
           } catch (error) {
@@ -286,12 +343,13 @@ Examples:
       });
 
       // Create HTTP server
-      const outputFile = inputFile.replace(/\.jsx$/, ".html");
-      const outputPath = path.resolve(process.cwd(), outputFile);
-      const outputDir = path.dirname(outputPath);
+      const outDir = path.resolve(process.cwd(), outputDir);
+      const inputBasename = path.basename(inputFile, ".jsx");
+      const outputFilename = `${inputBasename}.html`;
+      const relativeOutput = path.relative(process.cwd(), path.join(outDir, outputFilename));
 
       const server = http.createServer(async (req, res) => {
-        let filePath = path.join(outputDir, req.url === "/" ? path.basename(outputPath) : req.url);
+        let filePath = path.join(outDir, req.url === "/" ? outputFilename : req.url);
 
         try {
           const content = await fs.readFile(filePath);
@@ -317,7 +375,7 @@ Examples:
 
       server.listen(httpPort, () => {
         console.log(`\n🚀 Server running at http://localhost:${httpPort}`);
-        console.log(`📝 Serving: ${outputFile}\n`);
+        console.log(`📝 Serving: ${relativeOutput}\n`);
       });
 
       // Keep process running
