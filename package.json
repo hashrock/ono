@@ -23,7 +23,8 @@
   ],
   "scripts": {
     "test": "node --test test/**/*.test.js",
-    "test:watch": "node --test --watch test/**/*.test.js"
+    "test:watch": "node --test --watch test/**/*.test.js",
+    "test:e2e": "node --test test/cli.e2e.test.js"
   },
   "keywords": [
     "jsx",

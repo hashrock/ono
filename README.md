@@ -252,8 +252,16 @@ npm install
 
 ### Run Tests
 
+Run unit tests:
+
 ```bash
 npm test
+```
+
+Run e2e tests:
+
+```bash
+npm run test:e2e
 ```
 
 ### Watch Mode
@@ -261,6 +269,18 @@ npm test
 ```bash
 npm run test:watch
 ```
+
+### Continuous Integration
+
+This project uses GitHub Actions for automated testing. The CI pipeline:
+
+- Tests on Node.js 18.x, 20.x, and 22.x
+- Tests on Ubuntu, Windows, and macOS
+- Runs both unit and e2e tests
+- Validates CLI commands
+- Performs build tests
+
+See `.github/workflows/ci.yml` for the full configuration
 
 ### Link for Local Development
 
