@@ -9,9 +9,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@ono': path.resolve(__dirname, '../src'),
-      typescript: path.resolve(__dirname, '../node_modules/typescript/lib/typescript.js'),
-      '@unocss/core': path.resolve(__dirname, '../node_modules/@unocss/core/dist/index.mjs'),
-      '@unocss/preset-uno': path.resolve(__dirname, '../node_modules/@unocss/preset-uno/dist/index.mjs'),
+      typescript: path.resolve(__dirname, 'node_modules/typescript/lib/typescript.js'),
+      '@unocss/core': path.resolve(__dirname, 'node_modules/@unocss/core/dist/index.mjs'),
+      '@unocss/preset-uno': path.resolve(__dirname, 'node_modules/@unocss/preset-uno/dist/index.mjs'),
     },
   },
   build: {
