@@ -1,12 +1,17 @@
 {
-  "name": "mini-jsx",
+  "name": "@hashrock/ono",
   "version": "0.1.0",
-  "description": "A lightweight JSX library for static site generation",
+  "description": "A lightweight JSX library for static site generation with UnoCSS support",
   "type": "module",
   "main": "src/jsx-runtime.js",
   "bin": {
-    "mini-jsx": "./src/cli.js"
+    "ono": "./src/cli.js"
   },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "node --test test/**/*.test.js",
     "test:watch": "node --test --watch test/**/*.test.js"
@@ -14,10 +19,25 @@
   "keywords": [
     "jsx",
     "ssg",
-    "static-site-generator"
+    "static-site-generator",
+    "unocss",
+    "atomic-css",
+    "ono",
+    "lightweight"
   ],
-  "author": "",
+  "author": "hashrock",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hashrock/ono.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hashrock/ono/issues"
+  },
+  "homepage": "https://github.com/hashrock/ono#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
     "@unocss/preset-uno": "^66.5.4",
     "typescript": "^5.9.3",

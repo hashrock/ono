@@ -354,22 +354,24 @@ async function main() {
     const pkg = JSON.parse(
       await fs.readFile(new URL("../package.json", import.meta.url), "utf-8")
     );
-    console.log(`mini-jsx v${pkg.version}`);
+    console.log(`ono v${pkg.version}`);
     process.exit(0);
   }
 
   // Show help
   if (args.length === 0 || opts.help) {
     console.log(`
-Mini JSX - A lightweight JSX library for static site generation
+Ono - A lightweight JSX library for static site generation
 
 Usage:
-  mini-jsx build <file|dir> [options]  Build JSX file(s) to HTML
-  mini-jsx dev <file|dir> [options]    Start dev server with live reload
+  ono init [dir]                  Initialize a new Ono project
+  ono build <file|dir> [options]  Build JSX file(s) to HTML
+  ono dev <file|dir> [options]    Start dev server with live reload
 
 Arguments:
+  dir                      Project directory (default: current directory)
   file                     Single JSX file to build/serve
-  dir                      Pages directory (default: pages/)
+  pages                    Pages directory (default: pages/)
 
 Options:
   -w, --watch              Watch for changes and rebuild (build only)
@@ -379,20 +381,24 @@ Options:
   -v, --version            Show version number
 
 Examples:
+  # Initialize new project
+  ono init
+  ono init my-project
+
   # Single file mode
-  mini-jsx build example/index.jsx
-  mini-jsx build example/index.jsx --watch
-  mini-jsx dev example/index.jsx
+  ono build example/index.jsx
+  ono build example/index.jsx --watch
+  ono dev example/index.jsx
 
   # Pages mode (build all .jsx files in directory)
-  mini-jsx build pages
-  mini-jsx build pages --watch
-  mini-jsx dev pages
-  mini-jsx dev          # Same as: mini-jsx dev pages
+  ono build pages
+  ono build pages --watch
+  ono dev pages
+  ono dev          # Same as: ono dev pages
 
   # Custom options
-  mini-jsx build pages -o public
-  mini-jsx dev pages -p 8080
+  ono build pages -o public
+  ono dev pages -p 8080
     `);
     process.exit(0);
   }
@@ -400,7 +406,223 @@ Examples:
   const command = opts._[0];
   const inputFile = opts._[1];
 
-  if (command === "build") {
+  if (command === "init") {
+    const projectDir = inputFile || ".";
+    const projectPath = path.resolve(process.cwd(), projectDir);
+
+    try {
+      // Check if directory exists and is not empty
+      try {
+        const files = await fs.readdir(projectPath);
+        if (files.length > 0 && projectDir !== ".") {
+          console.error(`Error: Directory ${projectDir} is not empty`);
+          process.exit(1);
+        }
+      } catch (error) {
+        if (error.code === "ENOENT") {
+          // Directory doesn't exist, create it
+          await fs.mkdir(projectPath, { recursive: true });
+        } else {
+          throw error;
+        }
+      }
+
+      console.log(`\n🚀 Initializing Ono project in ${projectDir === "." ? "current directory" : projectDir}...\n`);
+
+      // Create directory structure
+      await fs.mkdir(path.join(projectPath, "pages"), { recursive: true });
+      await fs.mkdir(path.join(projectPath, "components"), { recursive: true });
+      await fs.mkdir(path.join(projectPath, "public", "css"), { recursive: true });
+
+      // Create Layout.jsx
+      const layoutContent = `// Layout component with slot support
+export default function Layout(props) {
+  return (
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{props.title || "Ono Site"}</title>
+        <link rel="stylesheet" href="/uno.css" />
+        <link rel="stylesheet" href="/css/style.css" />
+      </head>
+      <body class="font-sans max-w-800px mx-auto px-8 py-8 leading-relaxed">
+        <header class="mb-8 pb-4 border-b-2 border-gray-200">
+          <h1 class="text-3xl font-bold">{props.title}</h1>
+          {props.header}
+        </header>
+        <main>
+          {props.children}
+        </main>
+        <footer class="mt-12 pt-4 border-t border-gray-200 text-secondary text-sm">
+          {props.footer || <p>© 2025 Ono</p>}
+        </footer>
+      </body>
+    </html>
+  );
+}
+`;
+      await fs.writeFile(path.join(projectPath, "components", "Layout.jsx"), layoutContent);
+
+      // Create Hello.jsx component
+      const helloContent = `export default function Hello(props) {
+  return (
+    <div class="p-6 bg-blue-50 rounded-lg border-2 border-blue-200">
+      <h2 class="text-2xl font-semibold text-blue-800 mb-2">
+        Hello, {props.name || "World"}!
+      </h2>
+      <p class="text-blue-600">
+        This is a reusable component. Edit components/Hello.jsx to customize it.
+      </p>
+    </div>
+  );
+}
+`;
+      await fs.writeFile(path.join(projectPath, "components", "Hello.jsx"), helloContent);
+
+      // Create index.jsx
+      const indexContent = `import Layout from "../components/Layout.jsx";
+import Hello from "../components/Hello.jsx";
+
+export default function Home() {
+  return (
+    <Layout title="Welcome to Ono">
+      <Hello name="Developer" />
+
+      <div class="mt-8 space-y-6">
+        <section>
+          <h2 class="text-2xl font-bold mb-4">Getting Started</h2>
+          <p class="mb-4 text-lg">
+            You've successfully initialized an Ono project! Here's what you can do next:
+          </p>
+          <ul class="list-disc ml-6 space-y-2">
+            <li>Edit <code class="bg-gray-100 px-2 py-1 rounded text-sm">pages/index.jsx</code> to customize this page</li>
+            <li>Create new pages in the <code class="bg-gray-100 px-2 py-1 rounded text-sm">pages/</code> directory</li>
+            <li>Add components to <code class="bg-gray-100 px-2 py-1 rounded text-sm">components/</code></li>
+            <li>Put static assets in <code class="bg-gray-100 px-2 py-1 rounded text-sm">public/</code></li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4">Commands</h2>
+          <div class="space-y-2">
+            <div class="p-4 bg-gray-50 rounded border border-gray-200">
+              <code class="text-green-600 font-semibold">ono dev</code>
+              <p class="text-sm text-secondary mt-1">Start development server with live reload</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded border border-gray-200">
+              <code class="text-green-600 font-semibold">ono build pages</code>
+              <p class="text-sm text-secondary mt-1">Build your site to the dist/ directory</p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4">Features</h2>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="p-4 border border-gray-200 rounded">
+              <h3 class="font-semibold mb-2">🎨 UnoCSS</h3>
+              <p class="text-sm text-secondary">Atomic CSS with Tailwind-compatible utilities</p>
+            </div>
+            <div class="p-4 border border-gray-200 rounded">
+              <h3 class="font-semibold mb-2">⚡ Live Reload</h3>
+              <p class="text-sm text-secondary">Instant updates during development</p>
+            </div>
+            <div class="p-4 border border-gray-200 rounded">
+              <h3 class="font-semibold mb-2">📦 Component Based</h3>
+              <p class="text-sm text-secondary">Reusable JSX components</p>
+            </div>
+            <div class="p-4 border border-gray-200 rounded">
+              <h3 class="font-semibold mb-2">🚀 Static Output</h3>
+              <p class="text-sm text-secondary">Fast, SEO-friendly HTML</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </Layout>
+  );
+}
+`;
+      await fs.writeFile(path.join(projectPath, "pages", "index.jsx"), indexContent);
+
+      // Create style.css
+      const styleContent = `/* Custom styles for your Ono site */
+/* UnoCSS utilities will be automatically generated in uno.css */
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Add your custom styles here */
+`;
+      await fs.writeFile(path.join(projectPath, "public", "css", "style.css"), styleContent);
+
+      // Create .gitignore
+      const gitignoreContent = `# Build output
+dist/
+.mini-jsx-tmp.js
+
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+`;
+      await fs.writeFile(path.join(projectPath, ".gitignore"), gitignoreContent);
+
+      // Create package.json
+      const projectName = projectDir === "." ? path.basename(projectPath) : projectDir;
+      const packageJsonContent = {
+        name: projectName,
+        version: "0.1.0",
+        type: "module",
+        scripts: {
+          dev: "ono dev",
+          build: "ono build pages",
+          "build:watch": "ono build pages --watch"
+        },
+        devDependencies: {}
+      };
+      await fs.writeFile(
+        path.join(projectPath, "package.json"),
+        JSON.stringify(packageJsonContent, null, 2) + "\n"
+      );
+
+      console.log("✅ Created project structure:");
+      console.log("   pages/");
+      console.log("   ├── index.jsx");
+      console.log("   components/");
+      console.log("   ├── Layout.jsx");
+      console.log("   ├── Hello.jsx");
+      console.log("   public/");
+      console.log("   ├── css/");
+      console.log("   │   └── style.css");
+      console.log("   package.json");
+      console.log("   .gitignore");
+      console.log("");
+      console.log("🎉 Project initialized successfully!");
+      console.log("");
+      console.log("Next steps:");
+      if (projectDir !== ".") {
+        console.log(`  cd ${projectDir}`);
+      }
+      console.log("  npm run dev          # Start development server");
+      console.log("  npm run build        # Build for production");
+      console.log("");
+      console.log("Or use ono directly:");
+      console.log("  ono dev         # Start development server");
+      console.log("  ono build pages # Build for production");
+      console.log("");
+    } catch (error) {
+      console.error(`Error: ${error.message}`);
+      if (error.stack) {
+        console.error(error.stack);
+      }
+      process.exit(1);
+    }
+  } else if (command === "build") {
     const buildOptions = {
       outputDir: opts.output || "dist",
     };

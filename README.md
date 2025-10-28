@@ -1,6 +1,6 @@
-# Mini JSX
+# Ono
 
-A lightweight JSX library for static site generation (SSG).
+A lightweight JSX library for static site generation with UnoCSS support.
 
 ## Features
 
@@ -10,6 +10,9 @@ A lightweight JSX library for static site generation (SSG).
 - Development server with live reload
 - File watching for automatic rebuilds
 - Support for components and props
+- Integrated UnoCSS for atomic CSS generation
+- Quick project initialization with templates
+- Pages directory support for multi-page sites
 - Uses TypeScript's JSX transform
 
 ## Installation
@@ -17,33 +20,63 @@ A lightweight JSX library for static site generation (SSG).
 ### Global Installation
 
 ```bash
-npm install -g mini-jsx
+npm install -g @hashrock/ono
 ```
 
 ### Local Installation
 
 ```bash
-npm install mini-jsx
+npm install @hashrock/ono
 ```
+
+## Quick Start
+
+Initialize a new project:
+
+```bash
+ono init my-project
+cd my-project
+npm run dev
+```
+
+This creates a complete project structure with:
+- `pages/` directory with example page
+- `components/` directory with Layout and Hello components
+- `public/` directory for static assets
+- UnoCSS integration pre-configured
+- Development and build scripts
 
 ## Usage
 
 ### CLI Commands
 
+**Init** - Initialize a new Ono project:
+
+```bash
+ono init
+ono init my-project
+```
+
 **Build** - Build a JSX file to HTML:
 
 ```bash
-mini-jsx build example/index.jsx
+ono build example/index.jsx
+```
+
+**Build Pages** - Build all pages in a directory:
+
+```bash
+ono build pages
 ```
 
 **Build with Watch** - Watch for changes and rebuild automatically:
 
 ```bash
-mini-jsx build example/index.jsx --watch
+ono build pages --watch
 ```
 
 This will:
-- Build your JSX file to HTML
+- Build your JSX files to HTML
 - Watch for changes in `.jsx` files
 - Automatically rebuild when files change
 - No live reload (simple file watching)
@@ -51,25 +84,28 @@ This will:
 **Dev Server** - Start a development server with live reload:
 
 ```bash
-mini-jsx dev example/index.jsx
+ono dev
+ono dev pages
+ono dev example/index.jsx
 ```
 
 This will:
-- Build your JSX file to HTML
+- Build your JSX file(s) to HTML
 - Start an HTTP server (default: http://localhost:3000)
 - Watch for changes and rebuild automatically
 - Live reload the browser when files change
+- Generate UnoCSS automatically
 
-You can specify a custom port:
+You can specify custom options:
 
 ```bash
-mini-jsx dev example/index.jsx --port 8080
+ono dev --port 8080 --output build
 ```
 
 **Help** - Show usage information:
 
 ```bash
-mini-jsx --help
+ono --help
 ```
 
 ### JSX Example
@@ -87,7 +123,7 @@ export default function App() {
       <body>
         <Header title="Welcome" />
         <main>
-          <p>Hello, Mini JSX!</p>
+          <p>Hello, Ono!</p>
         </main>
       </body>
     </html>
@@ -106,10 +142,10 @@ function Header({ title }) {
 Build it:
 
 ```bash
-mini-jsx build example/index.jsx
+ono build example/index.jsx
 ```
 
-This generates `example/index.html`:
+This generates `dist/index.html`:
 
 ```html
 <!DOCTYPE html>
@@ -122,10 +158,51 @@ This generates `example/index.html`:
       <h1>Welcome</h1>
     </header>
     <main>
-      <p>Hello, Mini JSX!</p>
+      <p>Hello, Ono!</p>
     </main>
   </body>
 </html>
+```
+
+### UnoCSS Integration
+
+Ono automatically integrates with UnoCSS. Simply use utility classes in your JSX:
+
+```jsx
+export default function App() {
+  return (
+    <div class="max-w-800px mx-auto p-8">
+      <h1 class="text-3xl font-bold text-blue-600">
+        Welcome to Ono
+      </h1>
+      <p class="mt-4 text-gray-700">
+        UnoCSS utilities are automatically generated!
+      </p>
+    </div>
+  );
+}
+```
+
+The CSS will be automatically generated to `dist/uno.css` and included in your HTML.
+
+### Custom UnoCSS Configuration
+
+Create a `uno.config.js` file in your project root:
+
+```javascript
+import { presetUno } from "unocss";
+
+export default {
+  presets: [presetUno()],
+  theme: {
+    colors: {
+      primary: "#0070f3",
+    },
+  },
+  shortcuts: {
+    "btn": "px-4 py-2 rounded bg-primary text-white",
+  },
+};
 ```
 
 ## Configuration
@@ -138,7 +215,7 @@ Add to your `tsconfig.json`:
 {
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "mini-jsx"
+    "jsxImportSource": "@hashrock/ono"
   }
 }
 ```
@@ -146,7 +223,7 @@ Add to your `tsconfig.json`:
 Or use JSDoc comments in your `.jsx` files:
 
 ```jsx
-/** @jsxImportSource mini-jsx */
+/** @jsxImportSource @hashrock/ono */
 ```
 
 ## Development
@@ -175,14 +252,14 @@ npm run test:watch
 npm link
 ```
 
-This allows you to use the `mini-jsx` command globally while developing.
+This allows you to use the `ono` command globally while developing.
 
 ## API
 
 ### JSX Runtime
 
 ```javascript
-import { createElement } from 'mini-jsx/jsx-runtime';
+import { createElement } from '@hashrock/ono/jsx-runtime';
 ```
 
 The JSX runtime automatically handles JSX transformation when using TypeScript or Babel.
@@ -190,7 +267,7 @@ The JSX runtime automatically handles JSX transformation when using TypeScript o
 ### Renderer
 
 ```javascript
-import { renderToString } from 'mini-jsx';
+import { renderToString } from '@hashrock/ono';
 
 const html = renderToString(<div>Hello</div>);
 ```
@@ -198,10 +275,24 @@ const html = renderToString(<div>Hello</div>);
 ### Bundler
 
 ```javascript
-import { bundle } from 'mini-jsx';
+import { bundle } from '@hashrock/ono';
 
 const code = await bundle('./path/to/file.jsx');
 ```
+
+## Pages Mode
+
+Ono supports building multi-page sites by placing JSX files in a `pages/` directory:
+
+```
+pages/
+├── index.jsx          → dist/index.html
+├── about.jsx          → dist/about.html
+└── blog/
+    └── first-post.jsx → dist/blog/first-post.html
+```
+
+Each file should export a default function that returns a complete HTML document. Use the Layout component pattern for shared structure across pages.
 
 ## License
 

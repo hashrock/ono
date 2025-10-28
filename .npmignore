@@ -1,0 +1,26 @@
+# Test files
+test/
+*.test.js
+
+# Example files
+example/
+pages/
+components/
+public/
+
+# Development files
+.vscode/
+.git/
+.gitignore
+tsconfig.json
+
+# Build output
+dist/
+.mini-jsx-tmp.js
+
+# Node modules
+node_modules/
+
+# Misc
+.DS_Store
+*.log
