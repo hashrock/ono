@@ -4,6 +4,15 @@
   "description": "Minimalist SSG framework with JSX, powered by TypeScript's JSX transformer",
   "type": "module",
   "main": "src/jsx-runtime.js",
+  "exports": {
+    ".": "./src/jsx-runtime.js",
+    "./jsx-runtime": "./src/jsx-runtime.js",
+    "./renderer": "./src/renderer.js",
+    "./transformer": "./src/transformer.js",
+    "./bundler": "./src/bundler.js",
+    "./browser/compiler": "./src/browser/compiler.js",
+    "./browser/unocss": "./src/browser/unocss.js"
+  },
   "bin": {
     "ono": "src/cli.js"
   },
