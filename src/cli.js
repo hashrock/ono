@@ -11,6 +11,7 @@ import net from "node:net";
 import { bundle } from "./bundler.js";
 import { renderToString } from "./renderer.js";
 import { WebSocketServer } from "ws";
+import { generateCSSFromFiles, loadUnoConfig } from "./unocss.js";
 
 /**
  * Find an available port starting from the given port
@@ -103,6 +104,66 @@ async function discoverPages(pagesDir) {
       return [];
     }
     throw error;
+  }
+}
+
+/**
+ * Generate UnoCSS file from built HTML files
+ * @param {string} outputDir - Output directory containing HTML files
+ * @param {boolean} silent - Suppress console output
+ * @returns {Promise<boolean>} True if CSS was generated
+ */
+async function generateUnoCSSFile(outputDir, silent = false) {
+  const outputDirAbs = path.resolve(process.cwd(), outputDir);
+
+  // Find all HTML files
+  const htmlFiles = [];
+
+  async function findHTMLFiles(dir) {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        await findHTMLFiles(fullPath);
+      } else if (entry.isFile() && entry.name.endsWith(".html")) {
+        htmlFiles.push(fullPath);
+      }
+    }
+  }
+
+  try {
+    await findHTMLFiles(outputDirAbs);
+
+    if (htmlFiles.length === 0) {
+      return false;
+    }
+
+    // Load UnoCSS config
+    const unoConfig = await loadUnoConfig(path.resolve(process.cwd(), "uno.config.js"));
+
+    // Generate CSS from all HTML files
+    const css = await generateCSSFromFiles(htmlFiles, unoConfig);
+
+    if (css) {
+      // Write CSS file
+      const cssPath = path.join(outputDirAbs, "uno.css");
+      await fs.writeFile(cssPath, css);
+
+      if (!silent) {
+        console.log(`\n⚡ Generated UnoCSS: uno.css`);
+      }
+
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    if (!silent) {
+      console.error(`Warning: UnoCSS generation failed: ${error.message}`);
+    }
+    return false;
   }
 }
 
@@ -374,6 +435,9 @@ Examples:
             console.log(`\n📦 Copied ${publicCount} file(s) from public/\n`);
           }
 
+          // Generate UnoCSS
+          await generateUnoCSSFile(buildOptions.outputDir);
+
           console.log(`👀 Watching for changes in ${pagesDir}/ and public/...`);
           console.log("Press Ctrl+C to stop\n");
 
@@ -385,6 +449,7 @@ Examples:
               const changedFile = path.join(pagesDirAbs, filename);
               try {
                 await buildFile(changedFile, { ...buildOptions, pagesDir: pagesDirAbs, silent: true });
+                await generateUnoCSSFile(buildOptions.outputDir, true);
                 console.log(`✓ Rebuilt: ${filename}`);
               } catch (error) {
                 console.error(`✗ Build error: ${error.message}`);
@@ -425,12 +490,18 @@ Examples:
           if (publicCount > 0) {
             console.log(`\n📦 Copied ${publicCount} file(s) from public/`);
           }
+
+          // Generate UnoCSS
+          await generateUnoCSSFile(buildOptions.outputDir);
         }
       } else if (inputFile) {
         // Single file mode
         if (opts.watch) {
           // Initial build
           await buildFile(inputFile, buildOptions);
+
+          // Generate UnoCSS
+          await generateUnoCSSFile(buildOptions.outputDir);
 
           // Watch for changes
           const absolutePath = path.resolve(process.cwd(), inputFile);
@@ -444,6 +515,7 @@ Examples:
             if (filename && filename.endsWith(".jsx")) {
               try {
                 await buildFile(inputFile, { ...buildOptions, silent: true });
+                await generateUnoCSSFile(buildOptions.outputDir, true);
                 console.log(`✓ Rebuilt: ${filename}`);
               } catch (error) {
                 console.error(`✗ Build error: ${error.message}`);
@@ -458,6 +530,9 @@ Examples:
         } else {
           // Single build
           await buildFile(inputFile, buildOptions);
+
+          // Generate UnoCSS
+          await generateUnoCSSFile(buildOptions.outputDir);
         }
       } else {
         console.error("Error: Please specify a file or pages directory to build");
@@ -515,6 +590,9 @@ Examples:
           console.log(`\n📦 Copied ${publicCount} file(s) from public/\n`);
         }
 
+        // Generate UnoCSS
+        await generateUnoCSSFile(outputDir);
+
         // Setup WebSocket server
         const wss = new WebSocketServer({ port: wsPort });
         const clients = new Set();
@@ -543,6 +621,7 @@ Examples:
             const changedFile = path.join(pagesDirAbs, filename);
             try {
               await buildFile(changedFile, { liveReload: true, silent: true, wsPort, outputDir, pagesDir: pagesDirAbs });
+              await generateUnoCSSFile(outputDir, true);
               console.log(`✓ Rebuilt: ${filename}`);
               notifyClients();
             } catch (error) {
@@ -614,6 +693,9 @@ Examples:
         // Initial build with live reload
         await buildFile(inputFile, { liveReload: true, wsPort, outputDir });
 
+        // Generate UnoCSS
+        await generateUnoCSSFile(outputDir);
+
         // Setup WebSocket server for live reload
         const wss = new WebSocketServer({ port: wsPort });
         const clients = new Set();
@@ -642,6 +724,7 @@ Examples:
           if (filename && filename.endsWith(".jsx")) {
             try {
               await buildFile(inputFile, { liveReload: true, silent: true, wsPort, outputDir });
+              await generateUnoCSSFile(outputDir, true);
               console.log(`✓ Rebuilt: ${filename}`);
               notifyClients();
             } catch (error) {

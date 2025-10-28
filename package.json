@@ -19,7 +19,9 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "@unocss/preset-uno": "^66.5.4",
+    "typescript": "^5.9.3",
+    "unocss": "^66.5.4"
   },
   "dependencies": {
     "ws": "^8.18.3"
