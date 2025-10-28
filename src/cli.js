@@ -107,6 +107,52 @@ async function discoverPages(pagesDir) {
 }
 
 /**
+ * Copy public directory to output directory
+ * @param {string} publicDir - Path to public directory
+ * @param {string} outputDir - Path to output directory
+ * @param {boolean} silent - Suppress console output
+ * @returns {Promise<number>} Number of files copied
+ */
+async function copyPublicFiles(publicDir, outputDir, silent = false) {
+  const publicDirAbs = path.resolve(process.cwd(), publicDir);
+  const outputDirAbs = path.resolve(process.cwd(), outputDir);
+
+  try {
+    // Check if public directory exists
+    await fs.access(publicDirAbs);
+  } catch (error) {
+    // Public directory doesn't exist, skip
+    return 0;
+  }
+
+  let fileCount = 0;
+
+  async function copyRecursive(src, dest) {
+    const entries = await fs.readdir(src, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+
+      if (entry.isDirectory()) {
+        await fs.mkdir(destPath, { recursive: true });
+        await copyRecursive(srcPath, destPath);
+      } else {
+        await fs.copyFile(srcPath, destPath);
+        fileCount++;
+        if (!silent) {
+          const relativePath = path.relative(publicDirAbs, srcPath);
+          console.log(`📄 Copied: public/${relativePath}`);
+        }
+      }
+    }
+  }
+
+  await copyRecursive(publicDirAbs, outputDirAbs);
+  return fileCount;
+}
+
+/**
  * Build a JSX file to HTML
  * @param {string} inputFile - Path to input JSX file
  * @param {object} options - Build options
@@ -322,10 +368,18 @@ Examples:
             await buildFile(page, { ...buildOptions, pagesDir: pagesDirAbs });
           }
 
-          console.log(`\n👀 Watching for changes in ${pagesDir}/...`);
+          // Copy public files
+          const publicCount = await copyPublicFiles("public", buildOptions.outputDir);
+          if (publicCount > 0) {
+            console.log(`\n📦 Copied ${publicCount} file(s) from public/\n`);
+          }
+
+          console.log(`👀 Watching for changes in ${pagesDir}/ and public/...`);
           console.log("Press Ctrl+C to stop\n");
 
           const { watch } = await import("node:fs");
+
+          // Watch pages directory
           watch(pagesDirAbs, { recursive: true }, async (_eventType, filename) => {
             if (filename && filename.endsWith(".jsx")) {
               const changedFile = path.join(pagesDirAbs, filename);
@@ -338,6 +392,24 @@ Examples:
             }
           });
 
+          // Watch public directory
+          const publicDirAbs = path.resolve(process.cwd(), "public");
+          try {
+            await fs.access(publicDirAbs);
+            watch(publicDirAbs, { recursive: true }, async (_eventType, filename) => {
+              if (filename) {
+                try {
+                  await copyPublicFiles("public", buildOptions.outputDir, true);
+                  console.log(`✓ Copied: public/${filename}`);
+                } catch (error) {
+                  console.error(`✗ Copy error: ${error.message}`);
+                }
+              }
+            });
+          } catch {
+            // Public directory doesn't exist, skip watching
+          }
+
           process.on("SIGINT", () => {
             console.log("\n\n👋 Shutting down...");
             process.exit(0);
@@ -346,6 +418,12 @@ Examples:
           // Build all pages
           for (const page of pages) {
             await buildFile(page, { ...buildOptions, pagesDir: pagesDirAbs });
+          }
+
+          // Copy public files
+          const publicCount = await copyPublicFiles("public", buildOptions.outputDir);
+          if (publicCount > 0) {
+            console.log(`\n📦 Copied ${publicCount} file(s) from public/`);
           }
         }
       } else if (inputFile) {
@@ -431,6 +509,12 @@ Examples:
           await buildFile(page, { liveReload: true, wsPort, outputDir, pagesDir: pagesDirAbs });
         }
 
+        // Copy public files
+        const publicCount = await copyPublicFiles("public", outputDir);
+        if (publicCount > 0) {
+          console.log(`\n📦 Copied ${publicCount} file(s) from public/\n`);
+        }
+
         // Setup WebSocket server
         const wss = new WebSocketServer({ port: wsPort });
         const clients = new Set();
@@ -449,9 +533,11 @@ Examples:
         }
 
         // Watch for changes
-        console.log(`\n👀 Watching for changes in ${pagesDir}/...`);
+        console.log(`👀 Watching for changes in ${pagesDir}/ and public/...`);
 
         const { watch } = await import("node:fs");
+
+        // Watch pages directory
         watch(pagesDirAbs, { recursive: true }, async (_eventType, filename) => {
           if (filename && filename.endsWith(".jsx")) {
             const changedFile = path.join(pagesDirAbs, filename);
@@ -464,6 +550,25 @@ Examples:
             }
           }
         });
+
+        // Watch public directory
+        const publicDirAbs = path.resolve(process.cwd(), "public");
+        try {
+          await fs.access(publicDirAbs);
+          watch(publicDirAbs, { recursive: true }, async (_eventType, filename) => {
+            if (filename) {
+              try {
+                await copyPublicFiles("public", outputDir, true);
+                console.log(`✓ Copied: public/${filename}`);
+                notifyClients();
+              } catch (error) {
+                console.error(`✗ Copy error: ${error.message}`);
+              }
+            }
+          });
+        } catch {
+          // Public directory doesn't exist, skip watching
+        }
 
         // Create HTTP server
         const outDir = path.resolve(process.cwd(), outputDir);
