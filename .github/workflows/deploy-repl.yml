@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'repl/**'
+      - 'src/**'
       - '.github/workflows/deploy-repl.yml'
   workflow_dispatch:
 

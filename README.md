@@ -274,8 +274,7 @@ npm run test:watch
 
 This project uses GitHub Actions for automated testing. The CI pipeline:
 
-- Tests on Node.js 18.x, 20.x, and 22.x
-- Tests on Ubuntu, Windows, and macOS
+- Tests on Node.js 22.x with Ubuntu
 - Runs both unit and e2e tests
 - Validates CLI commands
 - Performs build tests
