@@ -44,7 +44,7 @@ npm install @hashrock/ono
 
 ## Quick Start
 
-**Try it online**: [Ono REPL](https://hashrock.github.io/ono/repl/) - Browser-based JSX playground!
+**Try it online**: [Ono REPL](https://hashrock.github.io/ono/) - Worker-powered JSX playground!
 
 Or initialize a new project with npx (no installation required):
 
