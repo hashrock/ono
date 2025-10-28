@@ -7,6 +7,8 @@ A lightweight JSX library for static site generation (SSG).
 - Minimal JSX runtime for building static HTML sites
 - Built-in bundler for JSX files
 - CLI tool for building JSX to HTML
+- Development server with live reload
+- File watching for automatic rebuilds
 - Support for components and props
 - Uses TypeScript's JSX transform
 
@@ -26,15 +28,45 @@ npm install mini-jsx
 
 ## Usage
 
-### CLI
+### CLI Commands
 
-Build a JSX file to HTML:
+**Build** - Build a JSX file to HTML:
 
 ```bash
 mini-jsx build example/index.jsx
 ```
 
-Show help:
+**Build with Watch** - Watch for changes and rebuild automatically:
+
+```bash
+mini-jsx build example/index.jsx --watch
+```
+
+This will:
+- Build your JSX file to HTML
+- Watch for changes in `.jsx` files
+- Automatically rebuild when files change
+- No live reload (simple file watching)
+
+**Dev Server** - Start a development server with live reload:
+
+```bash
+mini-jsx dev example/index.jsx
+```
+
+This will:
+- Build your JSX file to HTML
+- Start an HTTP server (default: http://localhost:3000)
+- Watch for changes and rebuild automatically
+- Live reload the browser when files change
+
+You can specify a custom port:
+
+```bash
+mini-jsx dev example/index.jsx --port 8080
+```
+
+**Help** - Show usage information:
 
 ```bash
 mini-jsx --help
