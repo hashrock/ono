@@ -1,4 +1,4 @@
-// Ono compiler worker - inline version for standalone deployment
+// Ono compiler worker - multi-file bundler
 import ts from 'typescript';
 
 // Inline JSX transformer from Ono
@@ -87,26 +87,107 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// Simple module bundler
+function bundleModules(files, entryPoint) {
+  const modules = {};
+  const resolved = {};
+
+  // Transform all files
+  Object.keys(files).forEach(filename => {
+    const source = files[filename];
+    const transformed = transformJSX(source, filename);
+    modules[filename] = transformed;
+  });
+
+  // Resolve imports
+  function resolveImport(from, to) {
+    // Handle relative imports
+    if (to.startsWith('./') || to.startsWith('../')) {
+      const fromDir = from.split('/').slice(0, -1).join('/');
+      const parts = to.split('/');
+      const resolved = fromDir ? fromDir.split('/') : [];
+
+      for (const part of parts) {
+        if (part === '..') {
+          resolved.pop();
+        } else if (part !== '.') {
+          resolved.push(part);
+        }
+      }
+
+      return resolved.join('/');
+    }
+    return to;
+  }
+
+  // Build module system
+  let bundledCode = '';
+
+  Object.keys(modules).forEach(filename => {
+    let code = modules[filename];
+
+    // Replace import statements with references
+    code = code.replace(/import\s+{([^}]+)}\s+from\s+['"]([^'"]+)['"]/g, (match, imports, path) => {
+      const resolvedPath = resolveImport(filename, path);
+      const importNames = imports.split(',').map(s => s.trim());
+      return importNames.map(name => {
+        return `const ${name} = __modules['${resolvedPath}'].${name};`;
+      }).join('\n');
+    });
+
+    // Replace export statements
+    const exports = [];
+    code = code.replace(/export\s+function\s+(\w+)/g, (match, name) => {
+      exports.push(name);
+      return `function ${name}`;
+    });
+
+    // For entry point, we need to expose all top-level functions
+    if (filename === entryPoint) {
+      // Find all function declarations (including non-exported ones)
+      const functionMatches = code.matchAll(/function\s+(\w+)/g);
+      for (const match of functionMatches) {
+        if (!exports.includes(match[1])) {
+          exports.push(match[1]);
+        }
+      }
+    }
+
+    // Wrap in module function
+    bundledCode += `
+__modules['${filename}'] = (function() {
+  ${code}
+  return { ${exports.join(', ')} };
+})();
+`;
+  });
+
+  return `
+const __modules = {};
+${bundledCode}
+// Execute entry point
+const __entry = __modules['${entryPoint}'];
+`;
+}
+
 // Worker message handler
 self.onmessage = async (e) => {
-  const { type, code, id } = e.data;
+  const { type, files, entryPoint, id } = e.data;
 
   if (type === 'compile') {
     try {
-      // Remove export statements as they're not needed in REPL context
-      const cleanCode = code.replace(/export\s+default\s+/g, '');
+      // Bundle all modules
+      const bundled = bundleModules(files, entryPoint);
 
-      // Transform JSX to JavaScript
-      const jsCode = transformJSX(cleanCode, 'repl.jsx');
+      // Get the entry point code to find the last expression
+      const entryCode = files[entryPoint];
+      const lastExprMatch = entryCode.match(/\n\s*(\w+)\([^)]*\)\s*$/);
+      const returnExpr = lastExprMatch ? lastExprMatch[1] : '';
 
-      // Extract the last expression (component call)
-      const lastExprMatch = cleanCode.match(/\n\s*(\w+)\([^)]*\)\s*$/);
-      const returnExpr = lastExprMatch ? lastExprMatch[0] : '';
-
-      // Execute the code and render to HTML
+      // Execute the bundled code
       const fn = new Function('h', 'renderToString', `
-        ${jsCode}
-        return ${returnExpr.trim()};
+        ${bundled}
+        return __entry.${returnExpr}();
       `);
 
       const vnode = fn(h, renderToString);
