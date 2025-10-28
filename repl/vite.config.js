@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@ono': path.resolve(__dirname, '../src'),
+      typescript: path.resolve(__dirname, './node_modules/typescript/lib/typescript.js'),
     },
   },
   build: {
