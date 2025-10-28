@@ -1,210 +1,253 @@
-// Ono compiler worker - multi-file bundler
-import ts from 'typescript';
+// Ono compiler worker - web-friendly bundler that reuses the official runtime
+import { transformJSX } from '@ono/transformer.js';
+import { renderToString } from '@ono/renderer.js';
+import { h } from '@ono/jsx-runtime.js';
 
-// Inline JSX transformer from Ono
-function transformJSX(source, filename = 'input.jsx') {
-  const compilerOptions = {
-    jsx: ts.JsxEmit.React,
-    jsxFactory: 'h',
-    module: ts.ModuleKind.ESNext,
-    target: ts.ScriptTarget.ESNext,
-    esModuleInterop: true,
+function resolveImport(from, to) {
+  if (to.startsWith('./') || to.startsWith('../')) {
+    const fromParts = from.split('/').slice(0, -1);
+    const targetParts = to.split('/');
+    const resolved = [...fromParts];
+
+    for (const part of targetParts) {
+      if (!part || part === '.') continue;
+      if (part === '..') {
+        resolved.pop();
+      } else {
+        resolved.push(part);
+      }
+    }
+
+    return resolved.join('/');
+  }
+
+  return to;
+}
+
+function bundleModules(files, entryPoint) {
+  const filenames = Object.keys(files);
+  const dependencyMap = new Map();
+  const importPattern = /import\s+(?:[\s\S]+?)?from\s+['"]([^'"]+)['"]/g;
+
+  for (const filename of filenames) {
+    const source = files[filename] || '';
+    const deps = [];
+    source.replace(importPattern, (match, specifier) => {
+      const resolved = resolveImport(filename, specifier);
+      if (files[resolved]) {
+        deps.push(resolved);
+      }
+      return match;
+    });
+    dependencyMap.set(filename, deps);
+  }
+
+  const visited = new Set();
+  const order = [];
+
+  const visit = (file) => {
+    if (!files[file] || visited.has(file)) return;
+    visited.add(file);
+    const deps = dependencyMap.get(file) || [];
+    for (const dep of deps) {
+      visit(dep);
+    }
+    order.push(file);
   };
 
-  const result = ts.transpileModule(source, {
-    compilerOptions,
-    fileName: filename,
-  });
-
-  return result.outputText;
-}
-
-// Inline JSX runtime from Ono
-function h(type, props, ...children) {
-  if (typeof type === 'function') {
-    return type({ ...props, children: children.flat() });
+  if (entryPoint) {
+    visit(entryPoint);
   }
 
-  const flatChildren = children.flat(Infinity).filter(child =>
-    child !== null && child !== undefined && child !== false
-  );
-
-  return { type, props: props || {}, children: flatChildren };
-}
-
-// Inline renderer from Ono
-function renderToString(vnode) {
-  if (vnode === null || vnode === undefined || vnode === false) {
-    return '';
-  }
-
-  if (typeof vnode === 'string' || typeof vnode === 'number') {
-    return escapeHtml(String(vnode));
-  }
-
-  if (Array.isArray(vnode)) {
-    return vnode.map(renderToString).join('');
-  }
-
-  const { type, props, children } = vnode;
-
-  const attrs = Object.entries(props || {})
-    .filter(([key]) => key !== 'children' && key !== 'key')
-    .map(([key, value]) => {
-      if (key === 'className') key = 'class';
-      if (typeof value === 'boolean') {
-        return value ? key : '';
-      }
-      if (value === null || value === undefined) {
-        return '';
-      }
-      return `${key}="${escapeHtml(String(value))}"`;
-    })
-    .filter(Boolean)
-    .join(' ');
-
-  const attrsStr = attrs ? ' ' + attrs : '';
-
-  const selfClosing = [
-    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
-    'link', 'meta', 'param', 'source', 'track', 'wbr'
-  ];
-
-  if (selfClosing.includes(type)) {
-    return `<${type}${attrsStr} />`;
-  }
-
-  const childrenStr = (children || []).map(renderToString).join('');
-  return `<${type}${attrsStr}>${childrenStr}</${type}>`;
-}
-
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-// Simple module bundler
-function bundleModules(files, entryPoint) {
-  const modules = {};
-  const resolved = {};
-
-  // Transform all files
-  Object.keys(files).forEach(filename => {
-    const source = files[filename];
-    const transformed = transformJSX(source, filename);
-    modules[filename] = transformed;
-  });
-
-  // Resolve imports
-  function resolveImport(from, to) {
-    // Handle relative imports
-    if (to.startsWith('./') || to.startsWith('../')) {
-      const fromDir = from.split('/').slice(0, -1).join('/');
-      const parts = to.split('/');
-      const resolved = fromDir ? fromDir.split('/') : [];
-
-      for (const part of parts) {
-        if (part === '..') {
-          resolved.pop();
-        } else if (part !== '.') {
-          resolved.push(part);
-        }
-      }
-
-      return resolved.join('/');
+  for (const filename of filenames) {
+    if (!visited.has(filename)) {
+      visit(filename);
     }
-    return to;
   }
 
-  // Build module system
-  let bundledCode = '';
+  let bundledCode = 'const __modules = {};\n';
 
-  Object.keys(modules).forEach(filename => {
-    let code = modules[filename];
+  for (const filename of order) {
+    const transformedCode = transformJSX(files[filename], filename);
+    let code = transformedCode;
+    const exportMappings = new Map();
 
-    // Replace import statements with references
+    const addExport = (exportName, localName = exportName) => {
+      if (!exportName) return;
+      if (!exportMappings.has(exportName)) {
+        exportMappings.set(exportName, localName);
+      }
+    };
+
+    // Import transformations
     code = code.replace(/import\s+{([^}]+)}\s+from\s+['"]([^'"]+)['"]/g, (match, imports, path) => {
       const resolvedPath = resolveImport(filename, path);
-      const importNames = imports.split(',').map(s => s.trim());
-      return importNames.map(name => {
-        return `const ${name} = __modules['${resolvedPath}'].${name};`;
-      }).join('\n');
+      const importNames = imports.split(',').map(part => part.trim()).filter(Boolean);
+
+      return importNames
+        .map(name => {
+          const [local, alias] = name.split(/\s+as\s+/).map(token => token && token.trim());
+          const localName = alias || local;
+          const exportName = local;
+          return `const ${localName} = __modules['${resolvedPath}']['${exportName}'];`;
+        })
+        .join('\n');
     });
 
-    // Replace export statements
-    const exports = [];
-    code = code.replace(/export\s+function\s+(\w+)/g, (match, name) => {
-      exports.push(name);
+    code = code.replace(/import\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g, (match, localName, path) => {
+      const resolvedPath = resolveImport(filename, path);
+      return `const ${localName} = __modules['${resolvedPath}']['default'];`;
+    });
+
+    code = code.replace(/import\s+\*\s+as\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g, (match, localName, path) => {
+      const resolvedPath = resolveImport(filename, path);
+      return `const ${localName} = __modules['${resolvedPath}'];`;
+    });
+
+    // Export transformations
+    code = code.replace(/export\s+default\s+function\s+([A-Za-z_$][\w$]*)/g, (match, name) => {
+      addExport('default', name);
       return `function ${name}`;
     });
 
-    // For entry point, we need to expose all top-level functions
+    code = code.replace(/export\s+default\s+([A-Za-z_$][\w$]*)/g, (match, name) => {
+      addExport('default', name);
+      return `${name}`;
+    });
+
+    code = code.replace(/export\s+(const|let|var)\s+([A-Za-z_$][\w$]*)/g, (match, kind, name) => {
+      addExport(name);
+      return `${kind} ${name}`;
+    });
+
+    code = code.replace(/export\s+function\s+([A-Za-z_$][\w$]*)/g, (match, name) => {
+      addExport(name);
+      return `function ${name}`;
+    });
+
+    code = code.replace(/export\s+class\s+([A-Za-z_$][\w$]*)/g, (match, name) => {
+      addExport(name);
+      return `class ${name}`;
+    });
+
+    code = code.replace(/export\s*{\s*([^}]+)\s*};?/g, (match, names) => {
+      names
+        .split(',')
+        .map(part => part.trim())
+        .filter(Boolean)
+        .forEach(part => {
+          const [local, alias] = part.split(/\s+as\s+/).map(token => token && token.trim());
+          addExport(alias || local, local);
+        });
+      return '';
+    });
+
+    code = code.replace(/export\s*{\s*};?/g, '');
+
     if (filename === entryPoint) {
-      // Find all function declarations (including non-exported ones)
-      const functionMatches = code.matchAll(/function\s+(\w+)/g);
+      const functionMatches = code.matchAll(/function\s+([A-Za-z_$][\w$]*)/g);
       for (const match of functionMatches) {
-        if (!exports.includes(match[1])) {
-          exports.push(match[1]);
+        const name = match[1];
+        if (!exportMappings.has(name)) {
+          addExport(name);
         }
       }
     }
 
-    // Wrap in module function
+    const exportEntries = Array.from(exportMappings.entries()).map(([exportName, localName]) => {
+      if (exportName === 'default') {
+        return `'default': ${localName}`;
+      }
+      if (exportName === localName) {
+        return exportName;
+      }
+      return `'${exportName}': ${localName}`;
+    });
+
+    const exportsObject = exportEntries.join(', ');
+
     bundledCode += `
-__modules['${filename}'] = (function() {
+__modules['${filename}'] = (() => {
   ${code}
-  return { ${exports.join(', ')} };
+  return { ${exportsObject} };
 })();
 `;
-  });
+  }
 
-  return `
-const __modules = {};
-${bundledCode}
-// Execute entry point
-const __entry = __modules['${entryPoint}'];
-`;
+  bundledCode += `const __entry = __modules['${entryPoint}'];\n`;
+
+  return bundledCode;
 }
 
-// Worker message handler
-self.onmessage = async (e) => {
-  const { type, files, entryPoint, id } = e.data;
+self.onmessage = (event) => {
+  const { type, files, entryPoint, id } = event.data;
+  if (type !== 'compile') {
+    return;
+  }
 
-  if (type === 'compile') {
-    try {
-      // Bundle all modules
-      const bundled = bundleModules(files, entryPoint);
+  try {
+    const bundled = bundleModules(files, entryPoint);
 
-      // Get the entry point code to find the last expression
-      const entryCode = files[entryPoint];
-      const lastExprMatch = entryCode.match(/\n\s*(\w+)\([^)]*\)\s*$/);
-      const returnExpr = lastExprMatch ? lastExprMatch[1] : '';
+    const getEntryModule = new Function('h', `
+      ${bundled}
+      return __entry;
+    `);
 
-      // Execute the bundled code
-      const fn = new Function('h', 'renderToString', `
-        ${bundled}
-        return __entry.${returnExpr}();
-      `);
+    const entryModule = getEntryModule(h);
 
-      const vnode = fn(h, renderToString);
-      const html = renderToString(vnode);
+    const entryCode = files[entryPoint] || '';
+    const lastCallMatch = entryCode.match(/([A-Za-z_$][\\w$]*)\\s*\\([^)]*\\)\\s*$/m);
+    const lastCallName = lastCallMatch ? lastCallMatch[1] : null;
 
-      self.postMessage({
-        type: 'success',
-        html,
-        id
-      });
-    } catch (error) {
-      self.postMessage({
-        type: 'error',
-        error: error.message,
-        stack: error.stack,
-        id
-      });
+    let vnode = null;
+
+    if (entryModule && typeof entryModule === 'object') {
+      const defaultExport = entryModule.default;
+
+      if (typeof defaultExport === 'function') {
+        vnode = defaultExport();
+      } else if (defaultExport !== undefined) {
+        vnode = defaultExport;
+      }
+
+      if (!vnode && lastCallName) {
+        const candidate = entryModule[lastCallName];
+        if (typeof candidate === 'function') {
+          vnode = candidate();
+        } else if (candidate !== undefined) {
+          vnode = candidate;
+        }
+      }
+
+      if (!vnode) {
+        const fallbackFunction = Object.values(entryModule).find(
+          value => typeof value === 'function'
+        );
+        if (fallbackFunction) {
+          vnode = fallbackFunction();
+        } else if (entryModule && Object.values(entryModule).length > 0) {
+          vnode = Object.values(entryModule)[0];
+        }
+      }
     }
+
+    if (!vnode) {
+      throw new Error('Unable to determine a render function in the entry module.');
+    }
+
+    const html = renderToString(vnode);
+
+    self.postMessage({
+      type: 'success',
+      html,
+      id,
+    });
+  } catch (error) {
+    self.postMessage({
+      type: 'error',
+      error: error.message,
+      stack: error.stack,
+      id,
+    });
   }
 };

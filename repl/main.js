@@ -15,6 +15,19 @@ const worker = new Worker(new URL('./compiler.worker.js', import.meta.url), {
 });
 
 let currentRequestId = 0;
+let scheduleCompile;
+
+function debounce(fn, delay = 300) {
+  let timer;
+  function debounced(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  }
+  debounced.cancel = () => {
+    clearTimeout(timer);
+  };
+  return debounced;
+}
 
 // Example projects
 const examples = {
@@ -116,7 +129,11 @@ App()`
 
 // Handle worker messages
 worker.onmessage = (e) => {
-  const { type, html, error, stack } = e.data;
+  const { type, html, error, stack, id } = e.data;
+
+  if (id !== currentRequestId) {
+    return;
+  }
 
   if (type === 'success') {
     // Render HTML in iframe
@@ -163,6 +180,9 @@ function updateUI() {
 
     editor.addEventListener('input', (e) => {
       files[filename] = e.target.value;
+      if (scheduleCompile) {
+        scheduleCompile();
+      }
     });
 
     editor.addEventListener('keydown', handleEditorKeydown);
@@ -174,6 +194,9 @@ function updateUI() {
 function handleEditorKeydown(e) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
     e.preventDefault();
+    if (scheduleCompile) {
+      scheduleCompile.cancel();
+    }
     runCode();
   }
 
@@ -207,16 +230,26 @@ function runCode() {
   });
 }
 
+scheduleCompile = debounce(runCode, 400);
+
 // Load example
 function loadExample(name) {
   files = { ...examples[name] };
   currentFile = Object.keys(files)[0];
+  if (scheduleCompile) {
+    scheduleCompile.cancel();
+  }
   updateUI();
   runCode();
 }
 
 // Event listeners
-runBtn.addEventListener('click', runCode);
+runBtn.addEventListener('click', () => {
+  if (scheduleCompile) {
+    scheduleCompile.cancel();
+  }
+  runCode();
+});
 
 document.querySelectorAll('.example-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {

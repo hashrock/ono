@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ono REPL - Worker-powered JSX Playground</title>
+  <title>Ono REPL - Multi-file JSX Playground</title>
   <style>
     * {
       margin: 0;
@@ -68,13 +68,42 @@
       align-items: center;
     }
 
+    .tabs {
+      display: flex;
+      gap: 0;
+      background: #252526;
+      border-bottom: 1px solid #3e3e42;
+      overflow-x: auto;
+    }
+
+    .tab {
+      padding: 0.5rem 1rem;
+      background: #2d2d2d;
+      border: none;
+      color: #8b949e;
+      cursor: pointer;
+      font-size: 0.875rem;
+      border-right: 1px solid #3e3e42;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .tab:hover {
+      background: #323232;
+    }
+
+    .tab.active {
+      background: #1e1e1e;
+      color: #fff;
+    }
+
     .editor-container {
       flex: 1;
       position: relative;
       overflow: hidden;
     }
 
-    #editor {
+    .editor {
       width: 100%;
       height: 100%;
       padding: 1rem;
@@ -87,6 +116,11 @@
       outline: none;
       resize: none;
       tab-size: 2;
+      display: none;
+    }
+
+    .editor.active {
+      display: block;
     }
 
     #preview {
@@ -156,13 +190,13 @@
       }
     }
   </style>
-  <script type="module" crossorigin src="/ono/assets/index-DDe_0Foc.js"></script>
+  <script type="module" crossorigin src="/ono/assets/index-mgAdAnOk.js"></script>
 </head>
 <body>
   <header>
     <div style="display: flex; align-items: center;">
       <h1>Ono REPL</h1>
-      <span class="tagline">Worker-powered JSX Playground</span>
+      <span class="tagline">Multi-file JSX Playground</span>
     </div>
     <button id="runBtn">Run (⌘/Ctrl+Enter)</button>
   </header>
@@ -170,16 +204,15 @@
   <div class="container">
     <div class="panel">
       <div class="panel-header">
-        <span>JSX Editor</span>
+        <span>Project Files</span>
         <div class="examples">
           <button class="example-btn" data-example="hello">Hello World</button>
-          <button class="example-btn" data-example="component">Component</button>
-          <button class="example-btn" data-example="list">List</button>
+          <button class="example-btn" data-example="multifile">Multi-file</button>
+          <button class="example-btn" data-example="blog">Blog</button>
         </div>
       </div>
-      <div class="editor-container">
-        <textarea id="editor" spellcheck="false"></textarea>
-      </div>
+      <div class="tabs" id="tabs"></div>
+      <div class="editor-container" id="editorContainer"></div>
     </div>
 
     <div class="panel">
@@ -192,7 +225,7 @@
     </div>
   </div>
 
-  <div class="status" id="status">Ready • Ono compiler running in Web Worker</div>
+  <div class="status" id="status">Ready • Multi-file Ono compiler running in Web Worker</div>
 
 </body>
 </html>
