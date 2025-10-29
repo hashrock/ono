@@ -207,11 +207,16 @@ test("snapshot - watch command on empty directory", async () => {
     .replace(/port \d+/g, "port PORT")
     .replace(/Server running at http:\/\/localhost:\d+/g, "Server running at http://localhost:PORT");
 
+  // Normalize file paths to be environment-independent
+  const normalizedStderr = stderr
+    .replace(/\/Users\/[^\/]+\/[^\/]+\/[^\/]+\/mini-jsx\/test-tmp\//g, "/PATH/test-tmp/")
+    .replace(/\/home\/runner\/work\/[^\/]+\/[^\/]+\/test-tmp\//g, "/PATH/test-tmp/");
+
   const output = `Exit Code: ${code}
 STDOUT:
 ${cleanedStdout}
 STDERR:
-${stderr}`;
+${normalizedStderr}`;
 
   await matchSnapshot(output, TEST_FILE, "watch command on empty directory");
 });
