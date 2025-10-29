@@ -44,7 +44,31 @@ async function copyPublicFiles(outputDir = "dist") {
 }
 
 async function runBuildCommand() {
-  const input = args[1] || "pages";
+  // Check for help flag
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(`
+Usage: ono build [input] [options]
+
+Build JSX files to static HTML
+
+Arguments:
+  input                  File or directory to build (default: pages)
+
+Options:
+  --output <dir>         Output directory (default: dist)
+  --help                 Show this help message
+
+Examples:
+  ono build              Build all pages in pages/ directory
+  ono build pages/index.jsx   Build a single file
+  ono build --output build   Build to build/ directory
+`);
+    process.exit(0);
+  }
+
+  // Filter out options to get the input argument
+  const nonOptionArgs = args.slice(1).filter(arg => !arg.startsWith("--"));
+  const input = nonOptionArgs[0] || "pages";
   const outputDir = args.includes("--output")
     ? args[args.indexOf("--output") + 1]
     : "dist";
