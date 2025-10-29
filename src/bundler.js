@@ -48,16 +48,24 @@ export async function bundle(entryFile) {
 }
 
 /**
- * Remove import statements from code
+ * Remove import statements from code (but keep package imports)
  * @param {string} code - JavaScript code
- * @returns {string} Code without imports
+ * @returns {string} Code with relative imports removed, package imports kept
  */
 function removeImports(code) {
-  // Remove import statements
+  // Remove only relative import statements, keep package imports
   const lines = code.split("\n");
   const filteredLines = lines.filter(line => {
     const trimmed = line.trim();
-    return !trimmed.startsWith("import ") && trimmed !== "import";
+    if (!trimmed.startsWith("import ")) return true;
+
+    // Keep package imports (not starting with . or /)
+    const importMatch = trimmed.match(/from\s+['"]([^'"]+)['"]/);
+    if (importMatch && !importMatch[1].startsWith('.') && !importMatch[1].startsWith('/')) {
+      return true; // Keep package import
+    }
+
+    return false; // Remove relative import
   });
 
   return filteredLines.join("\n");

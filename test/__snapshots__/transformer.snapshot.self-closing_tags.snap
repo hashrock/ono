@@ -1,0 +1,6 @@
+const form = (h("form", null,
+    h("input", { type: "text", name: "name", required: true }),
+    h("input", { type: "email", name: "email", required: true }),
+    h("br", null),
+    h("hr", null),
+    h("img", { src: "/logo.png", alt: "Logo" })));

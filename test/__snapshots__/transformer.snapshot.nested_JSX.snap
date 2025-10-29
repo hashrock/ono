@@ -1,0 +1,9 @@
+const elem = (h("div", { className: "container" },
+    h("h1", null, "Title"),
+    h("p", null,
+        "Paragraph with ",
+        h("strong", null, "bold"),
+        " text"),
+    h("ul", null,
+        h("li", null, "Item 1"),
+        h("li", null, "Item 2"))));

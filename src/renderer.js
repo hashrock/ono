@@ -46,11 +46,13 @@ function styleToString(style) {
  * Render attributes to string
  */
 function renderAttributes(props) {
+  if (!props) return '';
+
   const attributes = [];
 
   for (const [key, value] of Object.entries(props)) {
     // Skip special props
-    if (key === 'children') continue;
+    if (key === 'children' || key === 'dangerouslySetInnerHTML') continue;
 
     // Handle className -> class conversion
     if (key === 'className') {
@@ -119,10 +121,15 @@ export function renderToString(vnode) {
     return `<${tag}${attrs} />`;
   }
 
+  // Handle dangerouslySetInnerHTML
+  if (props && props.dangerouslySetInnerHTML && props.dangerouslySetInnerHTML.__html) {
+    return `<${tag}${attrs}>${props.dangerouslySetInnerHTML.__html}</${tag}>`;
+  }
+
   // Render children
-  const childrenHtml = children
-    .map(child => renderToString(child))
-    .join('');
+  const childrenHtml = children && children.length > 0
+    ? children.map(child => renderToString(child)).join('')
+    : '';
 
   return `<${tag}${attrs}>${childrenHtml}</${tag}>`;
 }

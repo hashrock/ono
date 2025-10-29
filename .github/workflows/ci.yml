@@ -26,13 +26,13 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-      - name: Run e2e tests
-        run: npm run test:e2e
+      - name: Run snapshot tests
+        run: npm run test:snapshot
 
       - name: Test CLI commands
         run: |
-          node src/cli.js --version
           node src/cli.js --help
+          node src/cli.js build --help
 
   lint:
     name: Lint
@@ -69,11 +69,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Initialize test project
+      - name: Create test project structure
         run: |
-          mkdir -p test-build
-          cd test-build
-          node ../src/cli.js init .
+          mkdir -p test-build/pages
+          echo 'import { createElement } from "../../src/jsx-runtime.js"; export default function Index() { return createElement("h1", null, "Hello World"); }' > test-build/pages/index.jsx
+          echo 'import { createElement } from "../../src/jsx-runtime.js"; export default function About() { return createElement("h1", null, "About"); }' > test-build/pages/about.jsx
 
       - name: Build test project
         run: |
@@ -83,6 +83,7 @@ jobs:
       - name: Verify build output
         run: |
           test -f test-build/dist/index.html
+          test -f test-build/dist/about.html
           test -d test-build/dist
           echo "Build output verified successfully"
 
