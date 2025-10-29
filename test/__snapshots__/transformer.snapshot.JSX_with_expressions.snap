@@ -1,0 +1,4 @@
+const todos = items.map(item => (h("li", { key: item.id, className: item.completed ? 'completed' : '' },
+    h("input", { type: "checkbox", checked: item.completed, onChange: () => toggle(item.id) }),
+    h("span", null, item.text),
+    h("button", { onClick: () => remove(item.id) }, "\u00D7"))));

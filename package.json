@@ -25,7 +25,9 @@
   "scripts": {
     "test": "node --test test/**/*.test.js",
     "test:watch": "node --test --watch test/**/*.test.js",
-    "test:e2e": "node --test test/cli.e2e.test.js"
+    "test:snapshot": "node --test test/**/*.snapshot.test.js",
+    "test:snapshot:update": "UPDATE_SNAPSHOTS=true node --test test/**/*.snapshot.test.js",
+    "test:all": "npm run test && npm run test:snapshot"
   },
   "keywords": [
     "jsx",

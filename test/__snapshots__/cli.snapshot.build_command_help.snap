@@ -1,0 +1,4 @@
+Exit Code: 1
+STDOUT:
+STDERR:
+Error: ENOENT: no such file or directory, stat '/Users/hashrock/code/cursor/mini-jsx/test-tmp/--help'

@@ -1,0 +1,5 @@
+function BlogPost({ title, children }) {
+    return (h("article", { className: "blog-post" },
+        h("h1", null, title),
+        h("div", { className: "content" }, children)));
+}

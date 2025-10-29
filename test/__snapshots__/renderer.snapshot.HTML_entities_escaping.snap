@@ -1,0 +1,1 @@
+<div title="This has &quot;quotes&quot; &amp; &lt;tags&gt;" data-value="&lt;script&gt;alert(&#039;xss&#039;)&lt;/script&gt;">Content with &lt;em&gt;HTML&lt;/em&gt; &amp; &quot;special&quot; characters</div>

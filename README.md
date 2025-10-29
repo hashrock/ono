@@ -252,16 +252,28 @@ npm install
 
 ### Run Tests
 
-Run unit tests:
+Run all unit tests:
 
 ```bash
 npm test
 ```
 
-Run e2e tests:
+Run snapshot tests:
 
 ```bash
-npm run test:e2e
+npm run test:snapshot
+```
+
+Run all tests (unit + snapshot):
+
+```bash
+npm run test:all
+```
+
+Update snapshots after intentional changes:
+
+```bash
+npm run test:snapshot:update
 ```
 
 ### Watch Mode
@@ -270,14 +282,24 @@ npm run test:e2e
 npm run test:watch
 ```
 
+### Testing Strategy
+
+This project uses a comprehensive testing approach:
+
+- **Unit Tests**: Traditional assertion-based tests for core functionality
+- **Snapshot Tests**: Capture and verify output consistency for HTML rendering, JSX transformation, and CLI commands
+- **Integration Tests**: End-to-end testing of build processes and content collections
+
+For more details about snapshot testing, see [SNAPSHOT_TESTING.md](./SNAPSHOT_TESTING.md).
+
 ### Continuous Integration
 
 This project uses GitHub Actions for automated testing. The CI pipeline:
 
 - Tests on Node.js 22.x with Ubuntu
-- Runs both unit and e2e tests
-- Validates CLI commands
-- Performs build tests
+- Runs comprehensive unit and snapshot tests
+- Validates CLI commands and build processes
+- Ensures output consistency across environments
 
 See `.github/workflows/ci.yml` for the full configuration
 
