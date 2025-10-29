@@ -351,6 +351,164 @@ ${bundledCode}
   return { outputPath, html: fullHtml };
 }
 
+/**
+ * Check if a file path contains dynamic route segments (e.g., [slug])
+ * @param {string} filePath - File path to check
+ * @returns {boolean}
+ */
+function isDynamicRoute(filePath) {
+  return /\[([^\]]+)\]/.test(filePath);
+}
+
+/**
+ * Extract dynamic parameter names from a file path
+ * @param {string} filePath - File path with dynamic segments
+ * @returns {string[]} Array of parameter names
+ */
+function extractDynamicParams(filePath) {
+  const matches = filePath.matchAll(/\[([^\]]+)\]/g);
+  return Array.from(matches, m => m[1]);
+}
+
+/**
+ * Build a dynamic route file by calling getStaticPaths and generating pages
+ * @param {string} inputFile - Path to input JSX file with dynamic segments
+ * @param {object} options - Build options
+ * @returns {Promise<Array>} Array of generated page results
+ */
+async function buildDynamicRoute(inputFile, options = {}) {
+  const { liveReload = false, silent = false, wsPort = 35729, outputDir = "dist", pagesDir = null } = options;
+  const absolutePath = path.resolve(process.cwd(), inputFile);
+
+  // Bundle and import the module to get getStaticPaths
+  const bundledCode = await bundle(absolutePath);
+
+  const codeWithRuntime = `
+// Inline JSX Runtime
+function flattenChildren(children) {
+  const result = [];
+  for (const child of children) {
+    if (child === null || child === undefined || typeof child === 'boolean') {
+      continue;
+    }
+    if (Array.isArray(child)) {
+      result.push(...flattenChildren(child));
+    } else {
+      result.push(child);
+    }
+  }
+  return result;
+}
+
+function h(tag, props, ...children) {
+  return {
+    tag,
+    props: props || {},
+    children: flattenChildren(children)
+  };
+}
+
+${bundledCode}
+`;
+
+  const tmpFile = path.join(process.cwd(), ".mini-jsx-tmp.js");
+  await fs.writeFile(tmpFile, codeWithRuntime);
+
+  const moduleUrl = `${tmpFile}?t=${Date.now()}`;
+  const module = await import(moduleUrl);
+
+  // Check if getStaticPaths exists
+  if (!module.getStaticPaths) {
+    throw new Error(`Dynamic route ${inputFile} must export a getStaticPaths function`);
+  }
+
+  // Get all paths to generate
+  const pathsData = await module.getStaticPaths();
+  const paths = Array.isArray(pathsData) ? pathsData : pathsData.paths || [];
+
+  if (!silent) {
+    console.log(`Building dynamic route ${inputFile} (${paths.length} pages)...`);
+  }
+
+  const results = [];
+  const App = module.default;
+
+  if (!App) {
+    throw new Error("No default export found in entry file");
+  }
+
+  // Generate a page for each path
+  for (const pathData of paths) {
+    const params = pathData.params || {};
+
+    // Render with params
+    let vnode = typeof App === "function" ? App({ params }) : App;
+
+    if (vnode instanceof Promise) {
+      vnode = await vnode;
+    }
+
+    let html = renderToString(vnode);
+
+    // Inject live reload script if requested
+    if (liveReload) {
+      const liveReloadScript = `
+<script>
+(function() {
+  const ws = new WebSocket('ws://localhost:${wsPort}');
+  ws.onmessage = function(event) {
+    if (event.data === 'reload') {
+      console.log('Reloading...');
+      window.location.reload();
+    }
+  };
+  ws.onclose = function() {
+    console.log('Live reload disconnected. Retrying...');
+    setTimeout(function() { window.location.reload(); }, 1000);
+  };
+})();
+</script>`;
+      html = html.replace("</body>", `${liveReloadScript}\n</body>`);
+    }
+
+    const fullHtml = `<!DOCTYPE html>\n${html}`;
+
+    // Calculate output path by replacing [param] with actual value
+    let outputPath;
+    if (pagesDir) {
+      let relativePath = path.relative(pagesDir, absolutePath);
+      // Replace [param] with actual values
+      for (const [key, value] of Object.entries(params)) {
+        relativePath = relativePath.replace(`[${key}]`, value);
+      }
+      relativePath = relativePath.replace(/\.jsx$/, ".html");
+      outputPath = path.join(outputDir, relativePath);
+    } else {
+      // Replace [param] in filename
+      let filename = path.basename(inputFile, ".jsx");
+      for (const [key, value] of Object.entries(params)) {
+        filename = filename.replace(`[${key}]`, value);
+      }
+      outputPath = path.join(outputDir, `${filename}.html`);
+    }
+
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    await fs.writeFile(outputPath, fullHtml);
+
+    if (!silent) {
+      const relativeOutput = path.relative(process.cwd(), outputPath);
+      console.log(`  ✓ ${relativeOutput}`);
+    }
+
+    results.push({ outputPath, html: fullHtml, params });
+  }
+
+  // Clean up temp file
+  await fs.unlink(tmpFile);
+
+  return results;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const opts = parseArgs(args);
@@ -654,7 +812,11 @@ node_modules/
         if (opts.watch) {
           // Initial build all pages
           for (const page of pages) {
-            await buildFile(page, { ...buildOptions, pagesDir: pagesDirAbs });
+            if (isDynamicRoute(page)) {
+              await buildDynamicRoute(page, { ...buildOptions, pagesDir: pagesDirAbs });
+            } else {
+              await buildFile(page, { ...buildOptions, pagesDir: pagesDirAbs });
+            }
           }
 
           // Copy public files
@@ -676,7 +838,11 @@ node_modules/
             if (filename && filename.endsWith(".jsx")) {
               const changedFile = path.join(pagesDirAbs, filename);
               try {
-                await buildFile(changedFile, { ...buildOptions, pagesDir: pagesDirAbs, silent: true });
+                if (isDynamicRoute(changedFile)) {
+                  await buildDynamicRoute(changedFile, { ...buildOptions, pagesDir: pagesDirAbs, silent: true });
+                } else {
+                  await buildFile(changedFile, { ...buildOptions, pagesDir: pagesDirAbs, silent: true });
+                }
                 await generateUnoCSSFile(buildOptions.outputDir, true);
                 console.log(`✓ Rebuilt: ${filename}`);
               } catch (error) {
@@ -710,7 +876,11 @@ node_modules/
         } else {
           // Build all pages
           for (const page of pages) {
-            await buildFile(page, { ...buildOptions, pagesDir: pagesDirAbs });
+            if (isDynamicRoute(page)) {
+              await buildDynamicRoute(page, { ...buildOptions, pagesDir: pagesDirAbs });
+            } else {
+              await buildFile(page, { ...buildOptions, pagesDir: pagesDirAbs });
+            }
           }
 
           // Copy public files
@@ -809,7 +979,11 @@ node_modules/
 
         // Initial build all pages
         for (const page of pages) {
-          await buildFile(page, { liveReload: true, wsPort, outputDir, pagesDir: pagesDirAbs });
+          if (isDynamicRoute(page)) {
+            await buildDynamicRoute(page, { liveReload: true, wsPort, outputDir, pagesDir: pagesDirAbs });
+          } else {
+            await buildFile(page, { liveReload: true, wsPort, outputDir, pagesDir: pagesDirAbs });
+          }
         }
 
         // Copy public files
@@ -848,7 +1022,11 @@ node_modules/
           if (filename && filename.endsWith(".jsx")) {
             const changedFile = path.join(pagesDirAbs, filename);
             try {
-              await buildFile(changedFile, { liveReload: true, silent: true, wsPort, outputDir, pagesDir: pagesDirAbs });
+              if (isDynamicRoute(changedFile)) {
+                await buildDynamicRoute(changedFile, { liveReload: true, silent: true, wsPort, outputDir, pagesDir: pagesDirAbs });
+              } else {
+                await buildFile(changedFile, { liveReload: true, silent: true, wsPort, outputDir, pagesDir: pagesDirAbs });
+              }
               await generateUnoCSSFile(outputDir, true);
               console.log(`✓ Rebuilt: ${filename}`);
               notifyClients();

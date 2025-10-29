@@ -1,8 +1,28 @@
 /** @jsxImportSource @hashrock/ono */
-import { getEntry } from "@hashrock/ono/content";
+import { getCollection, getEntry } from "@hashrock/ono/content";
 
-export default async function BlogPost() {
-  const post = await getEntry("blog", "first-post");
+export async function getStaticPaths() {
+  const posts = await getCollection("blog");
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+  }));
+}
+
+export default async function BlogPost({ params }) {
+  const post = await getEntry("blog", params.slug);
+
+  if (!post) {
+    return (
+      <html>
+        <head>
+          <title>Post Not Found</title>
+        </head>
+        <body>
+          <h1>404 - Post Not Found</h1>
+        </body>
+      </html>
+    );
+  }
 
   return (
     <html>
