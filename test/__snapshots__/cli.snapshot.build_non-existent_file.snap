@@ -1,4 +1,4 @@
 Exit Code: 1
 STDOUT:
 STDERR:
-Error: ENOENT: no such file or directory, stat '/Users/hashrock/code/cursor/mini-jsx/test-tmp/non-existent.jsx'
+Error: ENOENT: no such file or directory, stat '/PATH/test-tmp/non-existent.jsx'

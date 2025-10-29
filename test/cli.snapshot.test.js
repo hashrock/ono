@@ -124,11 +124,16 @@ ${stderr}`;
 test("snapshot - build command help", async () => {
   const { code, stdout, stderr } = await runCLI(["build", "--help"]);
 
+  // Normalize file paths to be environment-independent
+  const normalizedStderr = stderr
+    .replace(/\/Users\/[^\/]+\/[^\/]+\/[^\/]+\/mini-jsx\/test-tmp\//g, "/PATH/test-tmp/")
+    .replace(/\/home\/runner\/work\/[^\/]+\/[^\/]+\/test-tmp\//g, "/PATH/test-tmp/");
+
   const output = `Exit Code: ${code}
 STDOUT:
 ${stdout}
 STDERR:
-${stderr}`;
+${normalizedStderr}`;
 
   await matchSnapshot(output, TEST_FILE, "build command help");
 });
@@ -136,11 +141,16 @@ ${stderr}`;
 test("snapshot - build non-existent file", async () => {
   const { code, stdout, stderr } = await runCLI(["build", "non-existent.jsx"]);
 
+  // Normalize file paths to be environment-independent
+  const normalizedStderr = stderr
+    .replace(/\/Users\/[^\/]+\/[^\/]+\/[^\/]+\/mini-jsx\/test-tmp\//g, "/PATH/test-tmp/")
+    .replace(/\/home\/runner\/work\/[^\/]+\/[^\/]+\/test-tmp\//g, "/PATH/test-tmp/");
+
   const output = `Exit Code: ${code}
 STDOUT:
 ${stdout}
 STDERR:
-${stderr}`;
+${normalizedStderr}`;
 
   await matchSnapshot(output, TEST_FILE, "build non-existent file");
 });
@@ -148,11 +158,16 @@ ${stderr}`;
 test("snapshot - build non-existent directory", async () => {
   const { code, stdout, stderr } = await runCLI(["build", "non-existent-dir"]);
 
+  // Normalize file paths to be environment-independent
+  const normalizedStderr = stderr
+    .replace(/\/Users\/[^\/]+\/[^\/]+\/[^\/]+\/mini-jsx\/test-tmp\//g, "/PATH/test-tmp/")
+    .replace(/\/home\/runner\/work\/[^\/]+\/[^\/]+\/test-tmp\//g, "/PATH/test-tmp/");
+
   const output = `Exit Code: ${code}
 STDOUT:
 ${stdout}
 STDERR:
-${stderr}`;
+${normalizedStderr}`;
 
   await matchSnapshot(output, TEST_FILE, "build non-existent directory");
 });
