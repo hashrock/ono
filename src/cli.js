@@ -279,7 +279,13 @@ ${bundledCode}
   }
 
   // Render to HTML
-  const vnode = typeof App === "function" ? App({}) : App;
+  let vnode = typeof App === "function" ? App({}) : App;
+
+  // Handle async components
+  if (vnode instanceof Promise) {
+    vnode = await vnode;
+  }
+
   let html = renderToString(vnode);
 
   // Inject live reload script if requested

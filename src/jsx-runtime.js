@@ -41,5 +41,24 @@ export function createElement(tag, props, ...children) {
   };
 }
 
+/**
+ * JSX runtime function (react-jsx transform)
+ * @param {string|Function} tag - HTML tag name or component function
+ * @param {Object} props - Element properties/attributes (includes children)
+ * @returns {Object} VNode object
+ */
+export function jsx(tag, props) {
+  const { children, ...restProps } = props || {};
+  const childrenArray = children !== undefined ? (Array.isArray(children) ? children : [children]) : [];
+  return {
+    tag,
+    props: restProps,
+    children: flattenChildren(childrenArray)
+  };
+}
+
+// jsxs is the same as jsx (for elements with multiple children)
+export const jsxs = jsx;
+
 // Alias for compatibility
 export const h = createElement;
