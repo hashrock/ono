@@ -6,12 +6,12 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import http from "node:http";
 import net from "node:net";
 import { bundle } from "./bundler.js";
 import { renderToString } from "./renderer.js";
 import { WebSocketServer } from "ws";
 import { generateCSSFromFiles, loadUnoConfig } from "./unocss.js";
+import { createDevServer } from "./server.js";
 
 /**
  * Find an available port starting from the given port
@@ -358,16 +358,6 @@ ${bundledCode}
  */
 function isDynamicRoute(filePath) {
   return /\[([^\]]+)\]/.test(filePath);
-}
-
-/**
- * Extract dynamic parameter names from a file path
- * @param {string} filePath - File path with dynamic segments
- * @returns {string[]} Array of parameter names
- */
-function extractDynamicParams(filePath) {
-  const matches = filePath.matchAll(/\[([^\]]+)\]/g);
-  return Array.from(matches, m => m[1]);
 }
 
 /**
@@ -1055,39 +1045,15 @@ node_modules/
           // Public directory doesn't exist, skip watching
         }
 
-        // Create HTTP server
-        const outDir = path.resolve(process.cwd(), outputDir);
-
-        const server = http.createServer(async (req, res) => {
-          let requestPath = req.url === "/" ? "/index.html" : req.url;
-          let filePath = path.join(outDir, requestPath);
-
-          try {
-            const content = await fs.readFile(filePath);
-            const ext = path.extname(filePath);
-            const contentTypes = {
-              ".html": "text/html",
-              ".css": "text/css",
-              ".js": "text/javascript",
-              ".json": "application/json",
-              ".png": "image/png",
-              ".jpg": "image/jpeg",
-              ".gif": "image/gif",
-              ".svg": "image/svg+xml",
-            };
-
-            res.writeHead(200, { "Content-Type": contentTypes[ext] || "text/plain" });
-            res.end(content);
-          } catch (error) {
-            res.writeHead(404);
-            res.end("Not found");
-          }
+        // Create h3 server
+        await createDevServer({
+          outputDir,
+          port: httpPort,
+          mode: "pages",
         });
 
-        server.listen(httpPort, () => {
-          console.log(`\n🚀 Server running at http://localhost:${httpPort}`);
-          console.log(`📝 Serving: ${pagesDir}/ → ${outputDir}/\n`);
-        });
+        console.log(`\n🚀 Server running at http://localhost:${httpPort}`);
+        console.log(`📝 Serving: ${pagesDir}/ → ${outputDir}/\n`);
       } else {
         // Single file mode
         if (!inputFile) {
@@ -1139,41 +1105,20 @@ node_modules/
           }
         });
 
-        // Create HTTP server
-        const outDir = path.resolve(process.cwd(), outputDir);
+        // Create h3 server
         const inputBasename = path.basename(inputFile, ".jsx");
         const outputFilename = `${inputBasename}.html`;
-        const relativeOutput = path.relative(process.cwd(), path.join(outDir, outputFilename));
+        const relativeOutput = path.relative(process.cwd(), path.join(outputDir, outputFilename));
 
-        const server = http.createServer(async (req, res) => {
-          let filePath = path.join(outDir, req.url === "/" ? outputFilename : req.url);
-
-          try {
-            const content = await fs.readFile(filePath);
-            const ext = path.extname(filePath);
-            const contentTypes = {
-              ".html": "text/html",
-              ".css": "text/css",
-              ".js": "text/javascript",
-              ".json": "application/json",
-              ".png": "image/png",
-              ".jpg": "image/jpeg",
-              ".gif": "image/gif",
-              ".svg": "image/svg+xml",
-            };
-
-            res.writeHead(200, { "Content-Type": contentTypes[ext] || "text/plain" });
-            res.end(content);
-          } catch (error) {
-            res.writeHead(404);
-            res.end("Not found");
-          }
+        await createDevServer({
+          outputDir,
+          port: httpPort,
+          mode: "single",
+          indexFile: outputFilename,
         });
 
-        server.listen(httpPort, () => {
-          console.log(`\n🚀 Server running at http://localhost:${httpPort}`);
-          console.log(`📝 Serving: ${relativeOutput}\n`);
-        });
+        console.log(`\n🚀 Server running at http://localhost:${httpPort}`);
+        console.log(`📝 Serving: ${relativeOutput}\n`);
       }
 
       // Keep process running
