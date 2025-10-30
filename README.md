@@ -1,8 +1,6 @@
 # Ono
 
-> Minimalist SSG framework with JSX, powered by TypeScript's JSX transformer
-
-A lightweight JSX library for static site generation with UnoCSS support.
+Minimalist SSG framework with JSX, powered by TypeScript's JSX transformer
 
 ## Why Ono?
 
