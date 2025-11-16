@@ -22,8 +22,9 @@ Unlike heavyweight frameworks, Ono embraces simplicity. It's perfect for develop
 - File watching for automatic rebuilds
 - Support for components and props
 - Integrated UnoCSS for atomic CSS generation
-- Quick project initialization with templates
 - Pages directory support for multi-page sites
+- Content collections with Markdown support
+- Dynamic routes with `[slug].jsx` pattern
 - Uses TypeScript's JSX transform
 
 ## Installation

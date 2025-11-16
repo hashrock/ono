@@ -51,11 +51,6 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.9",
-    "@rollup/plugin-node-resolve": "^16.0.3",
-    "rollup": "^4.52.5"
-  },
   "dependencies": {
     "@unocss/preset-uno": "^66.5.4",
     "h3": "^2.0.1-rc.5",
