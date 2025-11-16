@@ -44,63 +44,55 @@ npm install @hashrock/ono
 
 **Try it online**: [Ono REPL](https://hashrock.github.io/ono/) - Worker-powered JSX playground!
 
-Or initialize a new project with npx (no installation required):
+Or create a simple JSX file and build it:
 
 ```bash
-npx @hashrock/ono init my-project
-cd my-project
-npm install
-npm run dev
-```
+# Create a JSX file
+echo '/** @jsxImportSource @hashrock/ono */
+export default function App() {
+  return (
+    <html>
+      <head><title>Hello Ono</title></head>
+      <body>
+        <h1>Hello, Ono!</h1>
+      </body>
+    </html>
+  );
+}' > index.jsx
 
-This creates a complete project structure with:
-- `pages/` directory with example page
-- `components/` directory with Layout and Hello components
-- `public/` directory for static assets
-- UnoCSS integration pre-configured
-- Development and build scripts
+# Build it
+npx @hashrock/ono build index.jsx
+
+# Or start a dev server
+npx @hashrock/ono dev index.jsx
+```
 
 ## Usage
 
 ### CLI Commands
 
-**Init** - Initialize a new Ono project:
+**Build** - Build JSX files to static HTML:
 
 ```bash
-ono init
-ono init my-project
-```
-
-**Build** - Build a JSX file to HTML:
-
-```bash
-ono build example/index.jsx
-```
-
-**Build Pages** - Build all pages in a directory:
-
-```bash
-ono build pages
-```
-
-**Build with Watch** - Watch for changes and rebuild automatically:
-
-```bash
-ono build pages --watch
+ono build                  # Build all pages in pages/ directory
+ono build pages            # Build all pages in pages/ directory
+ono build example/index.jsx # Build a single file
+ono build --output dist    # Specify output directory
 ```
 
 This will:
-- Build your JSX files to HTML
-- Watch for changes in `.jsx` files
-- Automatically rebuild when files change
-- No live reload (simple file watching)
+- Build your JSX file(s) to HTML
+- Copy files from `public/` directory
+- Generate UnoCSS automatically
 
 **Dev Server** - Start a development server with live reload:
 
 ```bash
-ono dev
-ono dev pages
-ono dev example/index.jsx
+ono dev                    # Start dev server for pages/ directory
+ono dev pages              # Start dev server for pages/ directory
+ono dev example/index.jsx  # Start dev server for a single file
+ono dev --port 8080        # Start dev server on custom port
+ono dev --output build     # Use custom output directory
 ```
 
 This will:
@@ -109,12 +101,6 @@ This will:
 - Watch for changes and rebuild automatically
 - Live reload the browser when files change
 - Generate UnoCSS automatically
-
-You can specify custom options:
-
-```bash
-ono dev --port 8080 --output build
-```
 
 **Help** - Show usage information:
 

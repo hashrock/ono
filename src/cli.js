@@ -96,50 +96,7 @@ Examples:
   console.log("\n✨ Build complete!");
 }
 
-async function runWatchCommand() {
-  const input = args[1] || "pages";
-  const outputDir = args.includes("--output")
-    ? args[args.indexOf("--output") + 1]
-    : "dist";
 
-  const unocssConfig = await loadUnoConfig();
-
-  // Initial build
-  const inputPath = resolve(process.cwd(), input);
-  const inputStat = await stat(inputPath);
-
-  if (inputStat.isDirectory()) {
-    await buildFiles(input, { outputDir, unocssConfig });
-  } else {
-    await buildFile(input, { outputDir, unocssConfig });
-  }
-
-  await copyPublicFiles(outputDir);
-  await generateUnoCSS({ outputDir, unocssConfig });
-
-  console.log("\n✨ Initial build complete!");
-
-  // Watch for changes
-  if (inputStat.isDirectory()) {
-    await watchFiles(input, {
-      outputDir,
-      unocssConfig,
-      onRebuild: async () => {
-        await copyPublicFiles(outputDir);
-      },
-    });
-  } else {
-    await watchFile(input, {
-      outputDir,
-      unocssConfig,
-      onRebuild: async () => {
-        await copyPublicFiles(outputDir);
-      },
-    });
-  }
-
-  console.log("\n👀 Watching for changes... (Press Ctrl+C to stop)");
-}
 
 async function runDevCommand() {
   const input = args[1] || "pages";
@@ -229,32 +186,7 @@ async function runDevCommand() {
   console.log(`📝 Serving: ${input}/ → ${outputDir}/`);
 }
 
-async function runServeCommand() {
-  const outputDir = args.includes("--output")
-    ? args[args.indexOf("--output") + 1]
-    : "dist";
-  const port = args.includes("--port")
-    ? parseInt(args[args.indexOf("--port") + 1])
-    : 3000;
 
-  let serverPort = port;
-  try {
-    await createDevServer({ outputDir, port, mode: "pages" });
-  } catch (error) {
-    if (error.code === "EADDRINUSE") {
-      serverPort = port + 1;
-      console.log(
-        `ℹ️  Port ${port} is busy, using port ${serverPort} instead`
-      );
-      await createDevServer({ outputDir, port: serverPort, mode: "pages" });
-    } else {
-      throw error;
-    }
-  }
-
-  console.log(`\n🚀 Server running at http://localhost:${serverPort}`);
-  console.log(`📁 Serving: ${outputDir}/`);
-}
 
 function showHelp() {
   console.log(`
@@ -267,13 +199,8 @@ Commands:
   build [input]          Build JSX files to static HTML
                          input: file or directory (default: pages)
 
-  watch [input]          Build and watch for changes
-                         input: file or directory (default: pages)
-
   dev [input]            Build, watch, and serve with live reload
                          input: file or directory (default: pages)
-
-  serve                  Serve built files (no building)
 
 Options:
   --output <dir>         Output directory (default: dist)
@@ -285,7 +212,6 @@ Examples:
   ono build pages/index.jsx   Build a single file
   ono dev                Start dev server with live reload
   ono dev --port 8080    Start dev server on port 8080
-  ono serve              Serve built files from dist/
 `);
 }
 
@@ -302,16 +228,8 @@ Examples:
         await runBuildCommand();
         break;
 
-      case "watch":
-        await runWatchCommand();
-        break;
-
       case "dev":
         await runDevCommand();
-        break;
-
-      case "serve":
-        await runServeCommand();
         break;
 
       default:
