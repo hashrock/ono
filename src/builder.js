@@ -207,7 +207,10 @@ async function getAllJSXFiles(dir) {
 /**
  * Helper to get paths from a dynamic route
  */
-async function getDynamicRoutePaths(file) {
+/**
+ * Helper to get paths from a dynamic route
+ */
+export async function getDynamicRoutePaths(file) {
   const outDir = resolve(process.cwd(), "dist");
   const jsx = await readFile(file, "utf-8");
   const transformed = await transformJSX(jsx, file);

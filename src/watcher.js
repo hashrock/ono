@@ -5,7 +5,7 @@ import { watch } from "node:fs";
 import { resolve, join, relative, extname } from "node:path";
 import { readdir } from "node:fs/promises";
 import { WebSocketServer } from "ws";
-import { buildFile, buildFiles, buildDynamicRoute, generateUnoCSS, isDynamicRoute } from "./builder.js";
+import { buildFile, buildFiles, buildDynamicRoute, generateUnoCSS, isDynamicRoute, getDynamicRoutePaths } from "./builder.js";
 
 /**
  * Create a WebSocket server for live reload
@@ -164,30 +164,4 @@ export async function watchFile(inputFile, options = {}) {
   const watcher = watch(resolvedInput, debouncedRebuild);
 
   return { watcher };
-}
-
-/**
- * Helper to get paths from a dynamic route
- */
-async function getDynamicRoutePaths(file) {
-  const { readFile, writeFile, mkdir } = await import("node:fs/promises");
-  const { dirname, join, basename } = await import("node:path");
-  const { transformJSX } = await import("./transformer.js");
-
-  const outDir = resolve(process.cwd(), "dist");
-  const jsx = await readFile(file, "utf-8");
-  const transformed = await transformJSX(jsx, file);
-
-  const tempFile = join(outDir, `_temp_paths_${Date.now()}.js`);
-  await mkdir(dirname(tempFile), { recursive: true });
-  await writeFile(tempFile, transformed);
-
-  const moduleUrl = new URL(`file://${tempFile}?t=${Date.now()}`);
-  const module = await import(moduleUrl.href);
-
-  const pathsData = module.getStaticPaths ? await module.getStaticPaths() : [];
-
-  await import("node:fs/promises").then((fs) => fs.unlink(tempFile).catch(() => {}));
-
-  return pathsData;
 }

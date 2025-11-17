@@ -6,11 +6,8 @@ Usage:
 Commands:
   build [input]          Build JSX files to static HTML
                          input: file or directory (default: pages)
-  watch [input]          Build and watch for changes
-                         input: file or directory (default: pages)
   dev [input]            Build, watch, and serve with live reload
                          input: file or directory (default: pages)
-  serve                  Serve built files (no building)
 Options:
   --output <dir>         Output directory (default: dist)
   --port <number>        Server port (default: 3000)
@@ -20,5 +17,4 @@ Examples:
   ono build pages/index.jsx   Build a single file
   ono dev                Start dev server with live reload
   ono dev --port 8080    Start dev server on port 8080
-  ono serve              Serve built files from dist/
 STDERR:
