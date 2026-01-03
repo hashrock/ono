@@ -6,6 +6,7 @@ import { resolve, join, dirname, basename, relative, extname } from "node:path";
 import { transformJSX } from "./transformer.js";
 import { renderToString } from "./renderer.js";
 import { generateCSSFromFiles } from "./unocss.js";
+import { bundle } from "./bundler.js";
 
 /**
  * Check if a route is dynamic (contains [param])
@@ -42,13 +43,11 @@ export async function buildFile(inputFile, options = {}) {
   const outDir = resolve(process.cwd(), outputDir);
   const resolvedInput = resolve(process.cwd(), inputFile);
 
-  // Read and transform JSX
-  const jsx = await readFile(resolvedInput, "utf-8");
-  const transformed = await transformJSX(jsx, resolvedInput);
+  // Bundle the file with all its dependencies
+  const bundledCode = await bundle(resolvedInput);
 
-  // Remove import statements for local components (they need to be bundled separately)
-  // For now, just add the h function inline
-  const codeWithRuntime = INLINE_JSX_RUNTIME + transformed;
+  // Add inline JSX runtime
+  const codeWithRuntime = INLINE_JSX_RUNTIME + bundledCode;
 
   // Write transformed JS temporarily
   const tempFile = join(outDir, `_temp_${Date.now()}.js`);
@@ -98,12 +97,11 @@ export async function buildDynamicRoute(inputFile, options = {}) {
   const outDir = resolve(process.cwd(), outputDir);
   const resolvedInput = resolve(process.cwd(), inputFile);
 
-  // Read and transform JSX
-  const jsx = await readFile(resolvedInput, "utf-8");
-  const transformed = await transformJSX(jsx, resolvedInput);
+  // Bundle the file with all its dependencies
+  const bundledCode = await bundle(resolvedInput);
 
   // Add inline JSX runtime
-  const codeWithRuntime = INLINE_JSX_RUNTIME + transformed;
+  const codeWithRuntime = INLINE_JSX_RUNTIME + bundledCode;
 
   // Write transformed JS temporarily
   const tempFile = join(outDir, `_temp_${Date.now()}.js`);
@@ -238,11 +236,12 @@ async function getAllJSXFiles(dir) {
  */
 export async function getDynamicRoutePaths(file) {
   const outDir = resolve(process.cwd(), "dist");
-  const jsx = await readFile(file, "utf-8");
-  const transformed = await transformJSX(jsx, file);
+
+  // Bundle the file with all its dependencies
+  const bundledCode = await bundle(file);
 
   // Add inline JSX runtime
-  const codeWithRuntime = INLINE_JSX_RUNTIME + transformed;
+  const codeWithRuntime = INLINE_JSX_RUNTIME + bundledCode;
 
   const tempFile = join(outDir, `_temp_paths_${Date.now()}.js`);
   await mkdir(dirname(tempFile), { recursive: true });
