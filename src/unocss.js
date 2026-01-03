@@ -5,6 +5,29 @@
 import { createGenerator, presetUno } from "unocss";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/**
+ * Get the Tailwind reset CSS
+ * @returns {Promise<string>} Reset CSS content
+ */
+async function getResetCSS() {
+  const resetPath = path.resolve(__dirname, "../node_modules/@unocss/reset/tailwind.css");
+  try {
+    return await fs.readFile(resetPath, "utf-8");
+  } catch {
+    // Fallback: try to find it relative to the package
+    try {
+      const fallbackPath = new URL("../node_modules/@unocss/reset/tailwind.css", import.meta.url);
+      return await fs.readFile(fileURLToPath(fallbackPath), "utf-8");
+    } catch {
+      return "";
+    }
+  }
+}
 
 /**
  * Create UnoCSS generator with default config
@@ -50,7 +73,7 @@ export async function generateCSS(html, config = {}) {
  * Extract and generate UnoCSS for multiple HTML files
  * @param {string[]} htmlFiles - Array of HTML file paths
  * @param {object} config - UnoCSS configuration
- * @returns {Promise<string>} Combined generated CSS
+ * @returns {Promise<string>} Combined generated CSS with reset
  */
 export async function generateCSSFromFiles(htmlFiles, config = {}) {
   const uno = await createUnoGenerator(config);
@@ -71,5 +94,8 @@ export async function generateCSSFromFiles(htmlFiles, config = {}) {
 
   // Generate CSS
   const { css } = await uno.generate(combinedHTML);
-  return css;
+
+  // Prepend reset CSS
+  const resetCSS = await getResetCSS();
+  return resetCSS + "\n" + css;
 }

@@ -14,6 +14,25 @@ export function isDynamicRoute(filePath) {
   return /\[([^\]]+)\]/.test(filePath);
 }
 
+// Inline JSX runtime for bundled output
+const INLINE_JSX_RUNTIME = `
+function flattenChildren(children) {
+  const result = [];
+  for (const child of children) {
+    if (child === null || child === undefined || typeof child === 'boolean') continue;
+    if (Array.isArray(child)) {
+      result.push(...flattenChildren(child));
+    } else {
+      result.push(child);
+    }
+  }
+  return result;
+}
+function h(tag, props, ...children) {
+  return { tag, props: props || {}, children: flattenChildren(children) };
+}
+`;
+
 /**
  * Build a single JSX file
  */
@@ -27,10 +46,14 @@ export async function buildFile(inputFile, options = {}) {
   const jsx = await readFile(resolvedInput, "utf-8");
   const transformed = await transformJSX(jsx, resolvedInput);
 
+  // Remove import statements for local components (they need to be bundled separately)
+  // For now, just add the h function inline
+  const codeWithRuntime = INLINE_JSX_RUNTIME + transformed;
+
   // Write transformed JS temporarily
   const tempFile = join(outDir, `_temp_${Date.now()}.js`);
   await mkdir(dirname(tempFile), { recursive: true });
-  await writeFile(tempFile, transformed);
+  await writeFile(tempFile, codeWithRuntime);
 
   // Import and render
   const moduleUrl = new URL(`file://${tempFile}?t=${Date.now()}`);
@@ -79,10 +102,13 @@ export async function buildDynamicRoute(inputFile, options = {}) {
   const jsx = await readFile(resolvedInput, "utf-8");
   const transformed = await transformJSX(jsx, resolvedInput);
 
+  // Add inline JSX runtime
+  const codeWithRuntime = INLINE_JSX_RUNTIME + transformed;
+
   // Write transformed JS temporarily
   const tempFile = join(outDir, `_temp_${Date.now()}.js`);
   await mkdir(dirname(tempFile), { recursive: true });
-  await writeFile(tempFile, transformed);
+  await writeFile(tempFile, codeWithRuntime);
 
   // Import module
   const moduleUrl = new URL(`file://${tempFile}?t=${Date.now()}`);
@@ -215,9 +241,12 @@ export async function getDynamicRoutePaths(file) {
   const jsx = await readFile(file, "utf-8");
   const transformed = await transformJSX(jsx, file);
 
+  // Add inline JSX runtime
+  const codeWithRuntime = INLINE_JSX_RUNTIME + transformed;
+
   const tempFile = join(outDir, `_temp_paths_${Date.now()}.js`);
   await mkdir(dirname(tempFile), { recursive: true });
-  await writeFile(tempFile, transformed);
+  await writeFile(tempFile, codeWithRuntime);
 
   const moduleUrl = new URL(`file://${tempFile}?t=${Date.now()}`);
   const module = await import(moduleUrl.href);
