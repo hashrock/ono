@@ -13,41 +13,41 @@ Ono is designed to be a minimal alternative to Astro, leveraging TypeScript's bu
 
 Unlike heavyweight frameworks, Ono embraces simplicity. It's perfect for developers who want the power of JSX and component-based development without the complexity of a full framework.
 
-## Features
+## Packages
 
-- Minimal JSX runtime for building static HTML sites
-- Built-in bundler for JSX files
-- CLI tool for building JSX to HTML
-- Development server with live reload
-- File watching for automatic rebuilds
-- Support for components and props
-- Integrated UnoCSS for atomic CSS generation
-- Pages directory support for multi-page sites
-- Content collections with Markdown support
-- Dynamic routes with `[slug].jsx` pattern
-- Uses TypeScript's JSX transform
+This is a monorepo containing the following packages:
 
-## Installation
-
-### Global Installation
-
-```bash
-npm install -g @hashrock/ono
-```
-
-### Local Installation
-
-```bash
-npm install @hashrock/ono
-```
+| Package | Description | npm |
+|---------|-------------|-----|
+| [@hashrock/ono](./packages/ono) | Core SSG framework with CLI | [![npm](https://img.shields.io/npm/v/@hashrock/ono)](https://www.npmjs.com/package/@hashrock/ono) |
+| [create-ono](./packages/create-ono) | Project scaffolding tool | [![npm](https://img.shields.io/npm/v/create-ono)](https://www.npmjs.com/package/create-ono) |
+| [@hashrock/ono-repl](./packages/repl) | Browser-based REPL playground | - |
 
 ## Quick Start
 
-**Try it online**: [Ono REPL](https://hashrock.github.io/ono/) - Worker-powered JSX playground!
+### Create a New Project
 
-Or create a simple JSX file and build it:
+The easiest way to start is using `create-ono`:
 
 ```bash
+npm create ono my-project
+cd my-project
+npm install
+npx ono dev
+```
+
+### Try Online
+
+**[Ono REPL](https://hashrock.github.io/ono/)** - Worker-powered JSX playground in your browser!
+
+### Manual Setup
+
+Or create a simple JSX file and build it directly:
+
+```bash
+# Install Ono
+npm install @hashrock/ono
+
 # Create a JSX file
 echo '/** @jsxImportSource @hashrock/ono */
 export default function App() {
@@ -62,17 +62,31 @@ export default function App() {
 }' > index.jsx
 
 # Build it
-npx @hashrock/ono build index.jsx
+npx ono build index.jsx
 
 # Or start a dev server
-npx @hashrock/ono dev index.jsx
+npx ono dev index.jsx
 ```
 
-## Usage
+## Features
 
-### CLI Commands
+- Minimal JSX runtime for building static HTML sites
+- Built-in bundler for JSX files
+- CLI tool for building JSX to HTML
+- Development server with live reload
+- File watching for automatic rebuilds
+- Support for components and props
+- Integrated UnoCSS for atomic CSS generation
+- Pages directory support for multi-page sites
+- Content collections with Markdown support
+- Dynamic routes with `[slug].jsx` pattern
+- Uses TypeScript's JSX transform
 
-**Build** - Build JSX files to static HTML:
+## CLI Usage
+
+### Build
+
+Build JSX files to static HTML:
 
 ```bash
 ono build                  # Build all pages in pages/ directory
@@ -81,12 +95,9 @@ ono build example/index.jsx # Build a single file
 ono build --output dist    # Specify output directory
 ```
 
-This will:
-- Build your JSX file(s) to HTML
-- Copy files from `public/` directory
-- Generate UnoCSS automatically
+### Dev Server
 
-**Dev Server** - Start a development server with live reload:
+Start a development server with live reload:
 
 ```bash
 ono dev                    # Start dev server for pages/ directory
@@ -96,25 +107,10 @@ ono dev --port 8080        # Start dev server on custom port
 ono dev --output build     # Use custom output directory
 ```
 
-This will:
-- Build your JSX file(s) to HTML
-- Start an HTTP server (default: http://localhost:3000)
-- Watch for changes and rebuild automatically
-- Live reload the browser when files change
-- Generate UnoCSS automatically
-
-**Help** - Show usage information:
-
-```bash
-ono --help
-```
-
-### JSX Example
-
-Create a JSX file with components:
+## JSX Example
 
 ```jsx
-// example/index.jsx
+/** @jsxImportSource @hashrock/ono */
 export default function App() {
   return (
     <html>
@@ -140,32 +136,7 @@ function Header({ title }) {
 }
 ```
 
-Build it:
-
-```bash
-ono build example/index.jsx
-```
-
-This generates `dist/index.html`:
-
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>My Site</title>
-  </head>
-  <body>
-    <header>
-      <h1>Welcome</h1>
-    </header>
-    <main>
-      <p>Hello, Ono!</p>
-    </main>
-  </body>
-</html>
-```
-
-### UnoCSS Integration
+## UnoCSS Integration
 
 Ono automatically integrates with UnoCSS. Simply use utility classes in your JSX:
 
@@ -184,11 +155,7 @@ export default function App() {
 }
 ```
 
-The CSS will be automatically generated to `dist/uno.css` and included in your HTML.
-
-### Custom UnoCSS Configuration
-
-Create a `uno.config.js` file in your project root:
+Create a `uno.config.js` file in your project root for custom configuration:
 
 ```javascript
 import { presetUno } from "unocss";
@@ -204,6 +171,18 @@ export default {
     "btn": "px-4 py-2 rounded bg-primary text-white",
   },
 };
+```
+
+## Pages Mode
+
+Ono supports building multi-page sites by placing JSX files in a `pages/` directory:
+
+```
+pages/
+├── index.jsx          → dist/index.html
+├── about.jsx          → dist/about.html
+└── blog/
+    └── first-post.jsx → dist/blog/first-post.html
 ```
 
 ## Configuration
@@ -227,114 +206,72 @@ Or use JSDoc comments in your `.jsx` files:
 /** @jsxImportSource @hashrock/ono */
 ```
 
-## Development
-
-### Install Dependencies
-
-```bash
-npm install
-```
-
-### Run Tests
-
-Run all unit tests:
-
-```bash
-npm test
-```
-
-Run snapshot tests:
-
-```bash
-npm run test:snapshot
-```
-
-Run all tests (unit + snapshot):
-
-```bash
-npm run test:all
-```
-
-Update snapshots after intentional changes:
-
-```bash
-npm run test:snapshot:update
-```
-
-### Watch Mode
-
-```bash
-npm run test:watch
-```
-
-### Testing Strategy
-
-This project uses a comprehensive testing approach:
-
-- **Unit Tests**: Traditional assertion-based tests for core functionality
-- **Snapshot Tests**: Capture and verify output consistency for HTML rendering, JSX transformation, and CLI commands
-- **Integration Tests**: End-to-end testing of build processes and content collections
-
-For more details about snapshot testing, see [SNAPSHOT_TESTING.md](./SNAPSHOT_TESTING.md).
-
-### Continuous Integration
-
-This project uses GitHub Actions for automated testing. The CI pipeline:
-
-- Tests on Node.js 22.x with Ubuntu
-- Runs comprehensive unit and snapshot tests
-- Validates CLI commands and build processes
-- Ensures output consistency across environments
-
-See `.github/workflows/ci.yml` for the full configuration
-
-### Link for Local Development
-
-```bash
-npm link
-```
-
-This allows you to use the `ono` command globally while developing.
-
 ## API
 
-### JSX Runtime
-
 ```javascript
+// JSX Runtime
 import { createElement } from '@hashrock/ono/jsx-runtime';
-```
 
-The JSX runtime automatically handles JSX transformation when using TypeScript or Babel.
-
-### Renderer
-
-```javascript
+// Renderer
 import { renderToString } from '@hashrock/ono';
-
 const html = renderToString(<div>Hello</div>);
-```
 
-### Bundler
-
-```javascript
+// Bundler
 import { bundle } from '@hashrock/ono';
-
 const code = await bundle('./path/to/file.jsx');
+
+// Content Collections
+import { getCollection } from '@hashrock/ono/content';
+const posts = await getCollection('blog');
 ```
 
-## Pages Mode
+## Development
 
-Ono supports building multi-page sites by placing JSX files in a `pages/` directory:
+This is a monorepo managed with pnpm workspaces.
 
+### Setup
+
+```bash
+# Install pnpm if not installed
+npm install -g pnpm
+
+# Install dependencies
+pnpm install
+
+# Run all tests
+pnpm test
+
+# Build all packages
+pnpm build
 ```
-pages/
-├── index.jsx          → dist/index.html
-├── about.jsx          → dist/about.html
-└── blog/
-    └── first-post.jsx → dist/blog/first-post.html
+
+### Working with Individual Packages
+
+```bash
+# Run tests for ono package
+pnpm --filter @hashrock/ono test
+
+# Start REPL dev server
+pnpm --filter @hashrock/ono-repl dev
+
+# Build REPL
+pnpm --filter @hashrock/ono-repl build
 ```
 
-Each file should export a default function that returns a complete HTML document. Use the Layout component pattern for shared structure across pages.
+### Testing
+
+```bash
+# Unit tests
+pnpm --filter @hashrock/ono test
+
+# Snapshot tests
+pnpm --filter @hashrock/ono test:snapshot
+
+# Update snapshots
+pnpm --filter @hashrock/ono test:snapshot:update
+```
+
+See [packages/ono/SNAPSHOT_TESTING.md](./packages/ono/SNAPSHOT_TESTING.md) for details on snapshot testing.
 
 ## License
 
