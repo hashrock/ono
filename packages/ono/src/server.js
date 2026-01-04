@@ -71,12 +71,16 @@ export async function createDevServer(options) {
         setResponseHeader(event, "Content-Type", contentTypes[ext] || "application/octet-stream");
         return content;
       } catch (error) {
-        console.error("Server error:", error);
+        // Don't log error for missing favicon.ico (browsers request it automatically)
+        const isFavicon = url === "/favicon.ico";
+        if (!isFavicon) {
+          console.error("Server error:", error);
+        }
         if (error.code === "ENOENT") {
           throw createError({
             statusCode: 404,
             statusMessage: "Not Found",
-            message: `File not found: ${error.path}`,
+            message: isFavicon ? "Favicon not found" : `File not found: ${error.path}`,
           });
         } else {
           throw createError({
