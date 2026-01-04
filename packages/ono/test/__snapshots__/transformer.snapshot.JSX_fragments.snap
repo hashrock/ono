@@ -1,0 +1,4 @@
+const content = (h(React.Fragment, null,
+    h("h1", null, "Title"),
+    h("p", null, "First paragraph"),
+    h("p", null, "Second paragraph")));
