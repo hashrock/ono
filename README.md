@@ -1,34 +1,34 @@
 # Ono
 
-Minimalist SSG framework with JSX, powered by TypeScript's JSX transformer
+ミニマリストなSSGフレームワーク。JSXとTypeScriptのJSXトランスフォーマーを活用
 
-## Why Ono?
+## なぜOnoなのか？
 
-Ono is designed to be a minimal alternative to Astro, leveraging TypeScript's built-in JSX transformation capabilities. The core philosophy is:
+OnoはAstroのミニマルな代替として設計されており、TypeScriptの組み込みJSX変換機能を活用しています。コアとなる哲学は：
 
-- **Minimal Dependencies**: Uses TypeScript's standard `tsx` transform feature, avoiding complex build toolchains
-- **High Portability**: Designed to be lightweight enough to run in Web Workers or even entirely in the browser
-- **Simple Architecture**: A minimal subset of static site generation features, focusing on what matters most
-- **Future Vision**: Enable browser-based REPL experiences and client-side static site generation
+- **最小限の依存関係**: TypeScript標準の`tsx`トランスフォーム機能を使用し、複雑なビルドツールチェーンを回避
+- **高い移植性**: Web Workersやブラウザ上でも動作できるほど軽量に設計
+- **シンプルなアーキテクチャ**: 静的サイト生成機能の最小限のサブセットに焦点を当て、本当に重要なものに集中
+- **将来のビジョン**: ブラウザベースのREPL体験とクライアントサイドでの静的サイト生成を実現
 
-Unlike heavyweight frameworks, Ono embraces simplicity. It's perfect for developers who want the power of JSX and component-based development without the complexity of a full framework.
+重量級フレームワークとは異なり、Onoはシンプルさを追求しています。フル機能フレームワークの複雑さなしに、JSXとコンポーネントベースの開発のパワーを求める開発者に最適です。
 
-## Packages
+## パッケージ
 
-This is a monorepo containing the following packages:
+これは以下のパッケージを含むモノレポです：
 
-| Package | Description | npm |
+| パッケージ | 説明 | npm |
 |---------|-------------|-----|
-| [@hashrock/ono](./packages/ono) | Core SSG framework with CLI | [![npm](https://img.shields.io/npm/v/@hashrock/ono)](https://www.npmjs.com/package/@hashrock/ono) |
-| [create-ono](./packages/create-ono) | Project scaffolding tool | [![npm](https://img.shields.io/npm/v/create-ono)](https://www.npmjs.com/package/create-ono) |
-| [@hashrock/ono-repl](./packages/repl) | Browser-based REPL playground | - |
-| [@hashrock/ono-lp](./packages/ono-lp) | LLM-powered landing page generator | - |
+| [@hashrock/ono](./packages/ono) | CLIを備えたコアSSGフレームワーク | [![npm](https://img.shields.io/npm/v/@hashrock/ono)](https://www.npmjs.com/package/@hashrock/ono) |
+| [create-ono](./packages/create-ono) | プロジェクトスキャフォールディングツール | [![npm](https://img.shields.io/npm/v/create-ono)](https://www.npmjs.com/package/create-ono) |
+| [@hashrock/ono-repl](./packages/repl) | ブラウザベースのREPLプレイグラウンド | - |
+| [@hashrock/ono-lp](./packages/ono-lp) | LLM搭載のランディングページジェネレーター | - |
 
-## Quick Start
+## クイックスタート
 
-### Create a New Project
+### 新規プロジェクトの作成
 
-The easiest way to start is using `create-ono`:
+最も簡単な始め方は`create-ono`を使用することです：
 
 ```bash
 npm create ono my-project
@@ -37,19 +37,19 @@ npm install
 npx ono dev
 ```
 
-### Try Online
+### オンラインで試す
 
-**[Ono REPL](https://hashrock.github.io/ono/)** - Worker-powered JSX playground in your browser!
+**[Ono REPL](https://hashrock.github.io/ono/)** - Worker搭載のJSXプレイグラウンドをブラウザで！
 
-### Manual Setup
+### 手動セットアップ
 
-Or create a simple JSX file and build it directly:
+または、シンプルなJSXファイルを作成して直接ビルドすることもできます：
 
 ```bash
-# Install Ono
+# Onoをインストール
 npm install @hashrock/ono
 
-# Create a JSX file
+# JSXファイルを作成
 echo '/** @jsxImportSource @hashrock/ono */
 export default function App() {
   return (
@@ -62,53 +62,53 @@ export default function App() {
   );
 }' > index.jsx
 
-# Build it
+# ビルド
 npx ono build index.jsx
 
-# Or start a dev server
+# または開発サーバーを起動
 npx ono dev index.jsx
 ```
 
-## Features
+## 機能
 
-- Minimal JSX runtime for building static HTML sites
-- Built-in bundler for JSX files
-- CLI tool for building JSX to HTML
-- Development server with live reload
-- File watching for automatic rebuilds
-- Support for components and props
-- Integrated UnoCSS for atomic CSS generation
-- Pages directory support for multi-page sites
-- Content collections with Markdown support
-- Dynamic routes with `[slug].jsx` pattern
-- Uses TypeScript's JSX transform
+- 静的HTMLサイト構築用のミニマルなJSXランタイム
+- JSXファイル用の組み込みバンドラー
+- JSXからHTMLへのビルド用CLIツール
+- ライブリロード付き開発サーバー
+- 自動再ビルド用のファイル監視
+- コンポーネントとpropsのサポート
+- アトミックCSS生成用のUnoCSS統合
+- マルチページサイト用のpagesディレクトリサポート
+- Markdownサポート付きのコンテンツコレクション
+- `[slug].jsx`パターンによる動的ルート
+- TypeScriptのJSXトランスフォームを使用
 
-## CLI Usage
+## CLI使用方法
 
-### Build
+### ビルド
 
-Build JSX files to static HTML:
-
-```bash
-ono build                  # Build all pages in pages/ directory
-ono build pages            # Build all pages in pages/ directory
-ono build example/index.jsx # Build a single file
-ono build --output dist    # Specify output directory
-```
-
-### Dev Server
-
-Start a development server with live reload:
+JSXファイルを静的HTMLにビルド：
 
 ```bash
-ono dev                    # Start dev server for pages/ directory
-ono dev pages              # Start dev server for pages/ directory
-ono dev example/index.jsx  # Start dev server for a single file
-ono dev --port 8080        # Start dev server on custom port
-ono dev --output build     # Use custom output directory
+ono build                  # pages/ディレクトリ内のすべてのページをビルド
+ono build pages            # pages/ディレクトリ内のすべてのページをビルド
+ono build example/index.jsx # 単一ファイルをビルド
+ono build --output dist    # 出力ディレクトリを指定
 ```
 
-## JSX Example
+### 開発サーバー
+
+ライブリロード付きの開発サーバーを起動：
+
+```bash
+ono dev                    # pages/ディレクトリ用の開発サーバーを起動
+ono dev pages              # pages/ディレクトリ用の開発サーバーを起動
+ono dev example/index.jsx  # 単一ファイル用の開発サーバーを起動
+ono dev --port 8080        # カスタムポートで開発サーバーを起動
+ono dev --output build     # カスタム出力ディレクトリを使用
+```
+
+## JSXの例
 
 ```jsx
 /** @jsxImportSource @hashrock/ono */
@@ -137,9 +137,9 @@ function Header({ title }) {
 }
 ```
 
-## UnoCSS Integration
+## UnoCSS統合
 
-Ono automatically integrates with UnoCSS. Simply use utility classes in your JSX:
+OnoはUnoCSSと自動的に統合されます。JSXでユーティリティクラスを使用するだけです：
 
 ```jsx
 export default function App() {
@@ -149,14 +149,14 @@ export default function App() {
         Welcome to Ono
       </h1>
       <p class="mt-4 text-gray-700">
-        UnoCSS utilities are automatically generated!
+        UnoCSSユーティリティは自動的に生成されます！
       </p>
     </div>
   );
 }
 ```
 
-Create a `uno.config.js` file in your project root for custom configuration:
+カスタム設定用に、プロジェクトルートに`uno.config.js`ファイルを作成します：
 
 ```javascript
 import { presetUno } from "unocss";
@@ -174,9 +174,9 @@ export default {
 };
 ```
 
-## Pages Mode
+## ページモード
 
-Ono supports building multi-page sites by placing JSX files in a `pages/` directory:
+Onoは`pages/`ディレクトリにJSXファイルを配置することでマルチページサイトの構築をサポートします：
 
 ```
 pages/
@@ -186,11 +186,11 @@ pages/
     └── first-post.jsx → dist/blog/first-post.html
 ```
 
-## Configuration
+## 設定
 
-### TypeScript/JSX Setup
+### TypeScript/JSXのセットアップ
 
-Add to your `tsconfig.json`:
+`tsconfig.json`に追加：
 
 ```json
 {
@@ -201,7 +201,7 @@ Add to your `tsconfig.json`:
 }
 ```
 
-Or use JSDoc comments in your `.jsx` files:
+または`.jsx`ファイルでJSDocコメントを使用：
 
 ```jsx
 /** @jsxImportSource @hashrock/ono */
@@ -210,70 +210,70 @@ Or use JSDoc comments in your `.jsx` files:
 ## API
 
 ```javascript
-// JSX Runtime
+// JSXランタイム
 import { createElement } from '@hashrock/ono/jsx-runtime';
 
-// Renderer
+// レンダラー
 import { renderToString } from '@hashrock/ono';
 const html = renderToString(<div>Hello</div>);
 
-// Bundler
+// バンドラー
 import { bundle } from '@hashrock/ono';
 const code = await bundle('./path/to/file.jsx');
 
-// Content Collections
+// コンテンツコレクション
 import { getCollection } from '@hashrock/ono/content';
 const posts = await getCollection('blog');
 ```
 
-## Development
+## 開発
 
-This is a monorepo managed with pnpm workspaces.
+これはpnpm workspacesで管理されているモノレポです。
 
-### Setup
+### セットアップ
 
 ```bash
-# Install pnpm if not installed
+# pnpmがインストールされていない場合
 npm install -g pnpm
 
-# Install dependencies
+# 依存関係をインストール
 pnpm install
 
-# Run all tests
+# すべてのテストを実行
 pnpm test
 
-# Build all packages
+# すべてのパッケージをビルド
 pnpm build
 ```
 
-### Working with Individual Packages
+### 個別パッケージの操作
 
 ```bash
-# Run tests for ono package
+# onoパッケージのテストを実行
 pnpm --filter @hashrock/ono test
 
-# Start REPL dev server
+# REPL開発サーバーを起動
 pnpm --filter @hashrock/ono-repl dev
 
-# Build REPL
+# REPLをビルド
 pnpm --filter @hashrock/ono-repl build
 ```
 
-### Testing
+### テスト
 
 ```bash
-# Unit tests
+# ユニットテスト
 pnpm --filter @hashrock/ono test
 
-# Snapshot tests
+# スナップショットテスト
 pnpm --filter @hashrock/ono test:snapshot
 
-# Update snapshots
+# スナップショットを更新
 pnpm --filter @hashrock/ono test:snapshot:update
 ```
 
-See [packages/ono/SNAPSHOT_TESTING.md](./packages/ono/SNAPSHOT_TESTING.md) for details on snapshot testing.
+スナップショットテストの詳細は[packages/ono/SNAPSHOT_TESTING.md](./packages/ono/SNAPSHOT_TESTING.md)を参照してください。
 
-## License
+## ライセンス
 
 MIT
