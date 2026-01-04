@@ -20,19 +20,24 @@ jobs:
         with:
           node-version: 22.x
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Run unit tests
-        run: npm test
+        run: pnpm --filter @hashrock/ono test
 
       - name: Run snapshot tests
-        run: npm run test:snapshot
+        run: pnpm --filter @hashrock/ono test:snapshot
 
       - name: Test CLI commands
         run: |
-          node src/cli.js --help
-          node src/cli.js build --help
+          node packages/ono/src/cli.js --help
+          node packages/ono/src/cli.js build --help
 
   lint:
     name: Lint
@@ -47,11 +52,16 @@ jobs:
         with:
           node-version: 20.x
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Check for syntax errors
-        run: node --check src/**/*.js test/**/*.js
+        run: node --check packages/ono/src/**/*.js packages/ono/test/**/*.js
 
   build:
     name: Build Test
@@ -66,19 +76,24 @@ jobs:
         with:
           node-version: 20.x
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Create test project structure
         run: |
           mkdir -p test-build/pages
-          echo 'import { createElement } from "../../src/jsx-runtime.js"; export default function Index() { return createElement("h1", null, "Hello World"); }' > test-build/pages/index.jsx
-          echo 'import { createElement } from "../../src/jsx-runtime.js"; export default function About() { return createElement("h1", null, "About"); }' > test-build/pages/about.jsx
+          echo 'import { createElement } from "../packages/ono/src/jsx-runtime.js"; export default function Index() { return createElement("h1", null, "Hello World"); }' > test-build/pages/index.jsx
+          echo 'import { createElement } from "../packages/ono/src/jsx-runtime.js"; export default function About() { return createElement("h1", null, "About"); }' > test-build/pages/about.jsx
 
       - name: Build test project
         run: |
           cd test-build
-          node ../src/cli.js build pages
+          node ../packages/ono/src/cli.js build pages
 
       - name: Verify build output
         run: |

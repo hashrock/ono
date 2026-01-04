@@ -1,6 +1,0 @@
-const styledDiv = (h("div", { style: {
-        backgroundColor: 'red',
-        fontSize: '16px',
-        padding: '10px',
-        border: '1px solid black'
-    } }, "Styled content"));

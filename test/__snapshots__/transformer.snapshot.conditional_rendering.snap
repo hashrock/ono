@@ -1,7 +1,0 @@
-const content = (h("div", null,
-    isLoggedIn ? (h("div", null,
-        h("h1", null, "Welcome back!"),
-        h("button", { onClick: logout }, "Logout"))) : (h("div", null,
-        h("h1", null, "Please log in"),
-        h("button", { onClick: login }, "Login"))),
-    showMessage && h("p", { className: "message" }, message)));

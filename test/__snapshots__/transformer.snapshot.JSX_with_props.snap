@@ -1,1 +1,0 @@
-const elem = h("div", { className: "test", id: "main" }, "Hello");
