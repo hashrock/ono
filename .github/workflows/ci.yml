@@ -88,8 +88,8 @@ jobs:
       - name: Create test project structure
         run: |
           mkdir -p test-build/pages
-          echo 'import { createElement } from "../packages/ono/src/jsx-runtime.js"; export default function Index() { return createElement("h1", null, "Hello World"); }' > test-build/pages/index.jsx
-          echo 'import { createElement } from "../packages/ono/src/jsx-runtime.js"; export default function About() { return createElement("h1", null, "About"); }' > test-build/pages/about.jsx
+          echo 'import { createElement } from "../../packages/ono/src/jsx-runtime.js"; export default function Index() { return createElement("h1", null, "Hello World"); }' > test-build/pages/index.jsx
+          echo 'import { createElement } from "../../packages/ono/src/jsx-runtime.js"; export default function About() { return createElement("h1", null, "About"); }' > test-build/pages/about.jsx
 
       - name: Build test project
         run: |
