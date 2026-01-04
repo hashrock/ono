@@ -82,6 +82,10 @@ npx ono dev index.jsx
 - `[slug].jsx`パターンによる動的ルート
 - TypeScriptのJSXトランスフォームを使用
 
+## 制限事項
+
+- **React Fragmentは非対応**: `<>...</>` や `<React.Fragment>` はサポートされていません。代わりに配列や親要素でラップしてください。
+
 ## CLI使用方法
 
 ### ビルド

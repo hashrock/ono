@@ -38,12 +38,10 @@ function Features() {
           </Card>
           <Card
             title="Card with Actions"
-            actions={
-              <>
-                <Button variant="primary">Action</Button>
-                <Button variant="secondary">Cancel</Button>
-              </>
-            }
+            actions={[
+              <Button variant="primary">Action</Button>,
+              <Button variant="secondary">Cancel</Button>
+            ]}
           >
             Cards can include action buttons.
           </Card>
