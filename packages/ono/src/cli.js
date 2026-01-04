@@ -9,8 +9,9 @@ import { existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import { loadUnoConfig } from "./unocss.js";
 import { createDevServer } from "./server.js";
-import { buildFile, buildFiles, generateUnoCSS } from "./builder.js";
+import { buildFile, buildFiles, buildDynamicRoute, generateUnoCSS, isDynamicRoute } from "./builder.js";
 import { watchFile, watchFiles, createWebSocketServer } from "./watcher.js";
+import { generateAllBarrelFiles, watchContentDir, createPost } from "./barrel.js";
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -82,6 +83,9 @@ Examples:
   if (inputStat.isDirectory()) {
     // Build all files in directory
     await buildFiles(input, { outputDir, unocssConfig });
+  } else if (isDynamicRoute(input)) {
+    // Build dynamic route
+    await buildDynamicRoute(input, { outputDir, unocssConfig });
   } else {
     // Build single file
     await buildFile(input, { outputDir, unocssConfig });
@@ -108,6 +112,12 @@ async function runDevCommand() {
     : "dist";
 
   const unocssConfig = await loadUnoConfig();
+
+  // Generate barrel files for content directory
+  const contentDir = resolve(process.cwd(), "content");
+  if (existsSync(contentDir)) {
+    await generateAllBarrelFiles(contentDir);
+  }
 
   // Initial build
   const inputPath = resolve(process.cwd(), input);
@@ -182,11 +192,82 @@ async function runDevCommand() {
     });
   }
 
+  // Watch content directory for barrel file regeneration
+  if (existsSync(contentDir)) {
+    watchContentDir(contentDir, {
+      onGenerate: async () => {
+        // Rebuild pages that might depend on content
+        if (inputStat.isDirectory()) {
+          await buildFiles(input, { outputDir, unocssConfig });
+        } else {
+          await buildFile(input, { outputDir, unocssConfig });
+        }
+        await generateUnoCSS({ outputDir, unocssConfig });
+      },
+    });
+  }
+
   console.log(`\n🚀 Server running at http://localhost:${serverPort}`);
   console.log(`📝 Serving: ${input}/ → ${outputDir}/`);
 }
 
 
+
+async function runNewCommand() {
+  const subCommand = args[1];
+  const title = args[2];
+
+  if (!subCommand || subCommand === "--help" || subCommand === "-h") {
+    console.log(`
+Usage: ono new <type> <title> [options]
+
+Create new content files
+
+Types:
+  blog <title>           Create a new blog post
+
+Options:
+  --author <name>        Author name
+  --tags <tag1,tag2>     Comma-separated tags
+  --help                 Show this help message
+
+Examples:
+  ono new blog "My First Post"
+  ono new blog "Hello World" --author "hashrock" --tags "js,web"
+`);
+    process.exit(0);
+  }
+
+  if (subCommand === "blog") {
+    if (!title) {
+      console.error("Error: Please provide a title for the blog post");
+      console.error('Usage: ono new blog "Post Title"');
+      process.exit(1);
+    }
+
+    const author = args.includes("--author")
+      ? args[args.indexOf("--author") + 1]
+      : "";
+    const tagsArg = args.includes("--tags")
+      ? args[args.indexOf("--tags") + 1]
+      : "";
+    const tags = tagsArg ? tagsArg.split(",").map((t) => t.trim()) : [];
+
+    const contentDir = resolve(process.cwd(), "content", "blog");
+
+    // Ensure content/blog directory exists
+    if (!existsSync(contentDir)) {
+      await mkdir(contentDir, { recursive: true });
+      console.log(`📁 Created directory: ${contentDir}`);
+    }
+
+    await createPost(contentDir, title, { author, tags });
+  } else {
+    console.error(`Unknown type: ${subCommand}`);
+    console.error('Run "ono new --help" for usage information');
+    process.exit(1);
+  }
+}
 
 function showHelp() {
   console.log(`
@@ -202,6 +283,9 @@ Commands:
   dev [input]            Build, watch, and serve with live reload
                          input: file or directory (default: pages)
 
+  new <type> <title>     Create new content (e.g., blog post)
+                         Types: blog
+
 Options:
   --output <dir>         Output directory (default: dist)
   --port <number>        Server port (default: 3000)
@@ -212,6 +296,7 @@ Examples:
   ono build pages/index.jsx   Build a single file
   ono dev                Start dev server with live reload
   ono dev --port 8080    Start dev server on port 8080
+  ono new blog "My Post" Create a new blog post
 `);
 }
 
@@ -230,6 +315,10 @@ Examples:
 
       case "dev":
         await runDevCommand();
+        break;
+
+      case "new":
+        await runNewCommand();
         break;
 
       default:

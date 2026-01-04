@@ -29,6 +29,7 @@ function flattenChildren(children) {
   }
   return result;
 }
+const Fragment = Symbol.for('Fragment');
 function h(tag, props, ...children) {
   return { tag, props: props || {}, children: flattenChildren(children) };
 }

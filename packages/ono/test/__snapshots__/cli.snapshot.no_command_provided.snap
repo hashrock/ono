@@ -8,6 +8,8 @@ Commands:
                          input: file or directory (default: pages)
   dev [input]            Build, watch, and serve with live reload
                          input: file or directory (default: pages)
+  new <type> <title>     Create new content (e.g., blog post)
+                         Types: blog
 Options:
   --output <dir>         Output directory (default: dist)
   --port <number>        Server port (default: 3000)
@@ -17,4 +19,5 @@ Examples:
   ono build pages/index.jsx   Build a single file
   ono dev                Start dev server with live reload
   ono dev --port 8080    Start dev server on port 8080
+  ono new blog "My Post" Create a new blog post
 STDERR:

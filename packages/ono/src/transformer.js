@@ -15,6 +15,7 @@ export function transformJSX(source, filename = 'input.jsx') {
   const compilerOptions = {
     jsx: ts.JsxEmit.React,
     jsxFactory: 'h',
+    jsxFragmentFactory: 'Fragment',
     module: ts.ModuleKind.ESNext,
     target: ts.ScriptTarget.ESNext,
     esModuleInterop: true,

@@ -84,6 +84,9 @@ function renderAttributes(props) {
   return attributes.length > 0 ? ' ' + attributes.join(' ') : '';
 }
 
+// Fragment symbol for JSX fragments
+const Fragment = Symbol.for('Fragment');
+
 /**
  * Render a VNode to HTML string
  */
@@ -99,6 +102,13 @@ export function renderToString(vnode) {
 
   // Handle VNode object
   const { tag, props, children } = vnode;
+
+  // Handle Fragment - render children only, no wrapper element
+  if (tag === Fragment || (typeof tag === 'symbol' && tag.toString() === 'Symbol(Fragment)')) {
+    return children && children.length > 0
+      ? children.map(child => renderToString(child)).join('')
+      : '';
+  }
 
   // Handle component functions
   if (typeof tag === 'function') {

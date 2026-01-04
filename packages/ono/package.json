@@ -11,6 +11,8 @@
     "./transformer": "./src/transformer.js",
     "./bundler": "./src/bundler.js",
     "./content": "./src/content.js",
+    "./blog": "./src/blog.js",
+    "./barrel": "./src/barrel.js",
     "./browser/compiler": "./src/browser/compiler.js",
     "./browser/unocss": "./src/browser/unocss.js"
   },

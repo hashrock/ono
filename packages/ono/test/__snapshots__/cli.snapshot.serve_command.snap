@@ -1,5 +1,3 @@
-Exit Code: 1
+Exit Code: null
 STDOUT:
 STDERR:
-Unknown command: serve
-Run "ono --help" for usage information
