@@ -50,7 +50,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -61,7 +61,8 @@ jobs:
         run: pnpm install
 
       - name: Check for syntax errors
-        run: node --check packages/ono/src/**/*.js packages/ono/test/**/*.js
+        run: |
+          find packages/ono/src packages/ono/test -name "*.js" -exec node --check {} \;
 
   build:
     name: Build Test
@@ -74,7 +75,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
