@@ -177,7 +177,7 @@ jobs:
         working-directory: temp-e2e/test-project
 
       - name: Run ono build
-        run: pnpm run build
+        run: node ../../packages/ono/src/cli.js build
         working-directory: temp-e2e/test-project
 
       - name: Verify build output
