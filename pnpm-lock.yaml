@@ -82,6 +82,9 @@ importers:
       '@hashrock/ono':
         specifier: workspace:*
         version: link:../ono
+      '@unocss/core':
+        specifier: ^66.5.4
+        version: 66.5.12
       '@unocss/preset-uno':
         specifier: ^66.5.4
         version: 66.5.12

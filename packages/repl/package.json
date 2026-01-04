@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@hashrock/ono": "workspace:*",
+    "@unocss/core": "^66.5.4",
     "@unocss/preset-uno": "^66.5.4",
     "typescript": "^5.9.3",
     "unocss": "^66.5.4",
