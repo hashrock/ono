@@ -1,14 +1,14 @@
 # @hashrock/ono
 
-Minimalist SSG framework with JSX, powered by TypeScript's JSX transformer.
+ミニマリストなSSGフレームワーク。JSXとTypeScriptのJSXトランスフォーマーを活用。
 
-## Install
+## インストール
 
 ```bash
 npm install @hashrock/ono
 ```
 
-## Usage
+## 使い方
 
 ```jsx
 /** @jsxImportSource @hashrock/ono */
@@ -22,12 +22,12 @@ npx ono build index.jsx
 npx ono dev index.jsx
 ```
 
-## Features
+## 機能
 
-- JSX to static HTML
-- Dev server with live reload
-- UnoCSS integration
-- Content collections (Markdown)
-- Dynamic routes (`[slug].jsx`)
+- JSXから静的HTMLへの変換
+- ライブリロード付き開発サーバー
+- UnoCSS統合
+- コンテンツコレクション（Markdown）
+- 動的ルート（`[slug].jsx`）
 
-See [root README](../../README.md) for full documentation.
+詳細なドキュメントは[ルートのREADME](../../README.md)を参照してください。

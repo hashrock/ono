@@ -1,8 +1,8 @@
 # create-ono
 
-Scaffold a new Ono project.
+新しいOnoプロジェクトをスキャフォールド。
 
-## Usage
+## 使い方
 
 ```bash
 npm create ono my-project
@@ -11,4 +11,4 @@ npm install
 npx ono dev
 ```
 
-See [root README](../../README.md) for full documentation.
+詳細なドキュメントは[ルートのREADME](../../README.md)を参照してください。

@@ -1,15 +1,15 @@
 # @hashrock/ono-repl
 
-Browser-based REPL playground for Ono.
+Ono用のブラウザベースREPLプレイグラウンド。
 
-## Development
+## 開発
 
 ```bash
-pnpm dev      # Start dev server
-pnpm build    # Build for production
-pnpm preview  # Preview production build
+pnpm dev      # 開発サーバーを起動
+pnpm build    # 本番用にビルド
+pnpm preview  # 本番ビルドをプレビュー
 ```
 
-## Live Demo
+## ライブデモ
 
 https://hashrock.github.io/ono/
