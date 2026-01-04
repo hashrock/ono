@@ -6,6 +6,7 @@ import { resolve, join, relative, extname } from "node:path";
 import { readdir } from "node:fs/promises";
 import { WebSocketServer } from "ws";
 import { buildFile, buildFiles, generateUnoCSS } from "./builder.js";
+import { generateBarrel } from "./barrels.js";
 
 /**
  * Create a WebSocket server for live reload
@@ -85,8 +86,9 @@ export async function watchFiles(inputPattern, options = {}) {
   });
 
   // Watch public directory if it exists
+  let publicWatcher;
   try {
-    const publicWatcher = watch(publicDir, { recursive: true }, async (eventType, filename) => {
+    publicWatcher = watch(publicDir, { recursive: true }, async (eventType, filename) => {
       if (filename) {
         console.log(`\n📝 Public file changed: ${filename}`);
         console.log("🔄 Rebuilding...\n");
@@ -104,12 +106,47 @@ export async function watchFiles(inputPattern, options = {}) {
         }
       }
     });
-
-    return { watcher, publicWatcher };
   } catch (error) {
     // Public directory might not exist
-    return { watcher };
   }
+
+  // Watch barrels directory if it exists
+  const barrelsDir = resolve(process.cwd(), "barrels");
+  let barrelsWatcher;
+  try {
+    barrelsWatcher = watch(barrelsDir, { recursive: true }, async (eventType, filename) => {
+      if (filename && (filename.endsWith(".tsx") || filename.endsWith(".jsx"))) {
+        // Extract barrel name from path (e.g., "blog/post1.tsx" -> "blog")
+        const barrelName = filename.split("/")[0];
+        const barrelDir = join(barrelsDir, barrelName);
+
+        console.log(`\n📝 Barrel file changed: ${filename}`);
+        console.log("🔄 Regenerating barrel...\n");
+
+        try {
+          await generateBarrel(barrelDir);
+
+          // Rebuild pages that might depend on this barrel
+          await buildFiles(inputPattern, { outputDir, unocssConfig, silent: false });
+          await generateUnoCSS({ outputDir, unocssConfig, silent: false });
+
+          if (onRebuild) {
+            await onRebuild();
+          }
+
+          if (wss) {
+            broadcastReload(wss);
+          }
+        } catch (error) {
+          console.error("❌ Barrel generation error:", error.message);
+        }
+      }
+    });
+  } catch (error) {
+    // Barrels directory might not exist
+  }
+
+  return { watcher, publicWatcher, barrelsWatcher };
 }
 
 /**

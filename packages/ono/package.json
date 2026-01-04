@@ -10,6 +10,7 @@
     "./renderer": "./src/renderer.js",
     "./transformer": "./src/transformer.js",
     "./bundler": "./src/bundler.js",
+    "./barrels": "./src/barrels.js",
     "./browser/compiler": "./src/browser/compiler.js",
     "./browser/unocss": "./src/browser/unocss.js"
   },
