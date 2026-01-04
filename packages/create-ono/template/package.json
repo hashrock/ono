@@ -1,0 +1,13 @@
+{
+  "name": "my-ono-project",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "ono dev",
+    "build": "ono build"
+  },
+  "dependencies": {
+    "@hashrock/ono": "^0.1.3"
+  }
+}

@@ -8,6 +8,8 @@ importers:
 
   .: {}
 
+  packages/create-ono: {}
+
   packages/ono:
     dependencies:
       '@unocss/preset-uno':
