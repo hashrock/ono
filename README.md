@@ -50,8 +50,7 @@ npx ono dev
 npm install @hashrock/ono
 
 # JSXファイルを作成
-echo '/** @jsxImportSource @hashrock/ono */
-export default function App() {
+echo 'export default function App() {
   return (
     <html>
       <head><title>Hello Ono</title></head>
@@ -111,7 +110,6 @@ ono dev --output build     # カスタム出力ディレクトリを使用
 ## JSXの例
 
 ```jsx
-/** @jsxImportSource @hashrock/ono */
 export default function App() {
   return (
     <html>
@@ -184,27 +182,6 @@ pages/
 ├── about.jsx          → dist/about.html
 └── blog/
     └── first-post.jsx → dist/blog/first-post.html
-```
-
-## 設定
-
-### TypeScript/JSXのセットアップ
-
-`tsconfig.json`に追加：
-
-```json
-{
-  "compilerOptions": {
-    "jsx": "react-jsx",
-    "jsxImportSource": "@hashrock/ono"
-  }
-}
-```
-
-または`.jsx`ファイルでJSDocコメントを使用：
-
-```jsx
-/** @jsxImportSource @hashrock/ono */
 ```
 
 ## API
