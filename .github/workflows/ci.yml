@@ -50,7 +50,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -61,7 +61,8 @@ jobs:
         run: pnpm install
 
       - name: Check for syntax errors
-        run: node --check packages/ono/src/**/*.js packages/ono/test/**/*.js
+        run: |
+          find packages/ono/src packages/ono/test -name "*.js" -exec node --check {} \;
 
   build:
     name: Build Test
@@ -74,7 +75,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -87,8 +88,8 @@ jobs:
       - name: Create test project structure
         run: |
           mkdir -p test-build/pages
-          echo 'import { createElement } from "../packages/ono/src/jsx-runtime.js"; export default function Index() { return createElement("h1", null, "Hello World"); }' > test-build/pages/index.jsx
-          echo 'import { createElement } from "../packages/ono/src/jsx-runtime.js"; export default function About() { return createElement("h1", null, "About"); }' > test-build/pages/about.jsx
+          echo 'export default function Index() { return <h1>Hello World</h1>; }' > test-build/pages/index.jsx
+          echo 'export default function About() { return <h1>About</h1>; }' > test-build/pages/about.jsx
 
       - name: Build test project
         run: |
