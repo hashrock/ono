@@ -140,3 +140,58 @@ jobs:
 
       - name: Clean up
         run: rm -rf packages/example/dist
+
+  e2e:
+    name: E2E Test (create-ono → ono build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run create-ono to scaffold project
+        run: node packages/create-ono/index.js temp-e2e/test-project
+
+      - name: Update package.json to use local ono package
+        run: |
+          cd temp-e2e/test-project
+          # Replace npm package with local file path
+          sed -i 's|"@hashrock/ono": ".*"|"@hashrock/ono": "file:../../packages/ono"|' package.json
+          cat package.json
+
+      - name: Install project dependencies
+        run: pnpm install
+        working-directory: temp-e2e/test-project
+
+      - name: Run ono build
+        run: pnpm run build
+        working-directory: temp-e2e/test-project
+
+      - name: Verify build output
+        run: |
+          test -d temp-e2e/test-project/dist
+          test -f temp-e2e/test-project/dist/index.html
+          echo "✓ dist directory exists"
+          echo "✓ index.html generated"
+          echo ""
+          echo "Build output:"
+          ls -la temp-e2e/test-project/dist/
+          echo ""
+          echo "Generated HTML:"
+          cat temp-e2e/test-project/dist/index.html
+
+      - name: Clean up
+        run: rm -rf temp-e2e
