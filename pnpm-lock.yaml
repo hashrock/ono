@@ -10,6 +10,12 @@ importers:
 
   packages/create-ono: {}
 
+  packages/example:
+    dependencies:
+      '@hashrock/ono':
+        specifier: workspace:*
+        version: link:../ono
+
   packages/ono:
     dependencies:
       '@unocss/preset-uno':
