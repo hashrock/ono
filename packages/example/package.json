@@ -1,0 +1,14 @@
+{
+  "name": "@hashrock/ono-example",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Example site showcasing Ono with UnoCSS, layouts, and components",
+  "scripts": {
+    "dev": "ono dev",
+    "build": "ono build"
+  },
+  "dependencies": {
+    "@hashrock/ono": "workspace:*"
+  }
+}
