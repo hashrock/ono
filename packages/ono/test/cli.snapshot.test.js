@@ -126,8 +126,7 @@ test("snapshot - build command help", async () => {
 
   // Normalize file paths to be environment-independent
   const normalizedStderr = stderr
-    .replace(/\/Users\/[^\/]+\/[^\/]+\/[^\/]+\/mini-jsx\/test-tmp\//g, "/PATH/test-tmp/")
-    .replace(/\/home\/runner\/work\/[^\/]+\/[^\/]+\/test-tmp\//g, "/PATH/test-tmp/");
+    .replace(/\/[^\s]+\/test-tmp\//g, "/PATH/test-tmp/");
 
   const output = `Exit Code: ${code}
 STDOUT:
@@ -143,8 +142,7 @@ test("snapshot - build non-existent file", async () => {
 
   // Normalize file paths to be environment-independent
   const normalizedStderr = stderr
-    .replace(/\/Users\/[^\/]+\/[^\/]+\/[^\/]+\/mini-jsx\/test-tmp\//g, "/PATH/test-tmp/")
-    .replace(/\/home\/runner\/work\/[^\/]+\/[^\/]+\/test-tmp\//g, "/PATH/test-tmp/");
+    .replace(/\/[^\s]+\/test-tmp\//g, "/PATH/test-tmp/");
 
   const output = `Exit Code: ${code}
 STDOUT:
@@ -160,8 +158,7 @@ test("snapshot - build non-existent directory", async () => {
 
   // Normalize file paths to be environment-independent
   const normalizedStderr = stderr
-    .replace(/\/Users\/[^\/]+\/[^\/]+\/[^\/]+\/mini-jsx\/test-tmp\//g, "/PATH/test-tmp/")
-    .replace(/\/home\/runner\/work\/[^\/]+\/[^\/]+\/test-tmp\//g, "/PATH/test-tmp/");
+    .replace(/\/[^\s]+\/test-tmp\//g, "/PATH/test-tmp/");
 
   const output = `Exit Code: ${code}
 STDOUT:
@@ -209,8 +206,7 @@ test("snapshot - watch command on empty directory", async () => {
 
   // Normalize file paths to be environment-independent
   const normalizedStderr = stderr
-    .replace(/\/Users\/[^\/]+\/[^\/]+\/[^\/]+\/mini-jsx\/test-tmp\//g, "/PATH/test-tmp/")
-    .replace(/\/home\/runner\/work\/[^\/]+\/[^\/]+\/test-tmp\//g, "/PATH/test-tmp/");
+    .replace(/\/[^\s]+\/test-tmp\//g, "/PATH/test-tmp/");
 
   const output = `Exit Code: ${code}
 STDOUT:
