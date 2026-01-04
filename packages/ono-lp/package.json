@@ -1,0 +1,29 @@
+{
+  "name": "@hashrock/ono-lp",
+  "version": "1.0.0",
+  "description": "Generate ONO-style landing pages from URLs using LLMs",
+  "type": "module",
+  "bin": {
+    "ono-lp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@hashrock/ono": "workspace:*",
+    "@ai-sdk/anthropic": "^1.0.0",
+    "@ai-sdk/google": "^1.0.0",
+    "@ai-sdk/openai": "^1.0.0",
+    "ai": "^4.3.19",
+    "commander": "^12.0.0",
+    "dotenv": "^17.2.3",
+    "node-html-markdown": "^1.3.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
