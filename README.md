@@ -22,6 +22,7 @@ This is a monorepo containing the following packages:
 | [@hashrock/ono](./packages/ono) | Core SSG framework with CLI | [![npm](https://img.shields.io/npm/v/@hashrock/ono)](https://www.npmjs.com/package/@hashrock/ono) |
 | [create-ono](./packages/create-ono) | Project scaffolding tool | [![npm](https://img.shields.io/npm/v/create-ono)](https://www.npmjs.com/package/create-ono) |
 | [@hashrock/ono-repl](./packages/repl) | Browser-based REPL playground | - |
+| [@hashrock/ono-lp](./packages/ono-lp) | LLM-powered landing page generator | - |
 
 ## Quick Start
 
