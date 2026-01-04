@@ -5,9 +5,9 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 export type ModelProvider = "claude" | "openai" | "gemini";
 
 const DEFAULT_MODELS: Record<ModelProvider, string> = {
-  claude: "claude-opus-4-5-20251101",
-  openai: "gpt-5",
-  gemini: "gemini-3-pro-preview",
+  claude: "claude-sonnet-4-20250514",
+  openai: "gpt-4o",
+  gemini: "gemini-2.0-flash-001",
 };
 
 export function getModel(provider: ModelProvider) {

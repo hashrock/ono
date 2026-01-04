@@ -56,6 +56,11 @@ export async function generateLP(
       content: z.string().describe("ファイルの内容（JSXコード）"),
     }),
     execute: async ({ path, content }) => {
+      // Skip if path is undefined or empty
+      if (!path || typeof path !== "string") {
+        console.warn("  ⚠ Skipped: invalid path");
+        return "エラー: pathが不正です";
+      }
       const file = { path, content };
       files.push(file);
       onFileGenerated?.(file);
