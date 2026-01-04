@@ -1,4 +1,3 @@
-/** @jsxImportSource @hashrock/ono */
 import { getCollection } from "@hashrock/ono/content";
 
 export default async function BlogIndex() {

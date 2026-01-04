@@ -11,7 +11,6 @@ npm install @hashrock/ono
 ## 使い方
 
 ```jsx
-/** @jsxImportSource @hashrock/ono */
 export default function App() {
   return <h1>Hello, Ono!</h1>;
 }

@@ -1,4 +1,3 @@
-/** @jsxImportSource @hashrock/ono */
 import { getCollection, getEntry } from "@hashrock/ono/content";
 
 export async function getStaticPaths() {
