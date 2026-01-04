@@ -5,7 +5,7 @@ import { watch } from "node:fs";
 import { resolve, join, relative, extname } from "node:path";
 import { readdir } from "node:fs/promises";
 import { WebSocketServer } from "ws";
-import { buildFile, buildFiles, buildDynamicRoute, generateUnoCSS, isDynamicRoute, getDynamicRoutePaths } from "./builder.js";
+import { buildFile, buildFiles, generateUnoCSS } from "./builder.js";
 
 /**
  * Create a WebSocket server for live reload
@@ -60,16 +60,7 @@ export async function watchFiles(inputPattern, options = {}) {
         console.log(`\n📝 File changed: ${relative(process.cwd(), file)}`);
         console.log("🔄 Rebuilding...\n");
 
-        if (isDynamicRoute(file)) {
-          const relativePath = relative(process.cwd(), file);
-          const pathsData = await getDynamicRoutePaths(file);
-          const count = Array.isArray(pathsData) ? pathsData.length : pathsData.paths?.length || 0;
-          console.log(`Building dynamic route ${relativePath} (${count} pages)...`);
-          await buildDynamicRoute(file, { outputDir, silent: true });
-        } else {
-          await buildFile(file, { outputDir, unocssConfig, silent: false });
-        }
-
+        await buildFile(file, { outputDir, unocssConfig, silent: false });
         await generateUnoCSS({ outputDir, unocssConfig, silent: false });
 
         if (onRebuild) {
@@ -140,12 +131,7 @@ export async function watchFile(inputFile, options = {}) {
         console.log(`\n📝 File changed: ${inputFile}`);
         console.log("🔄 Rebuilding...\n");
 
-        if (isDynamicRoute(inputFile)) {
-          await buildDynamicRoute(resolvedInput, { outputDir, silent: false });
-        } else {
-          await buildFile(resolvedInput, { outputDir, unocssConfig, silent: false });
-        }
-
+        await buildFile(resolvedInput, { outputDir, unocssConfig, silent: false });
         await generateUnoCSS({ outputDir, unocssConfig, silent: false });
 
         if (onRebuild) {

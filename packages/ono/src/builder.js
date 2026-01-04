@@ -1,19 +1,11 @@
 /**
  * Build utilities for Ono SSG
  */
-import { readFile, writeFile, mkdir, readdir, stat } from "node:fs/promises";
-import { resolve, join, dirname, basename, relative, extname } from "node:path";
-import { transformJSX } from "./transformer.js";
+import { writeFile, mkdir, readdir } from "node:fs/promises";
+import { resolve, join, dirname, basename, relative } from "node:path";
 import { renderToString } from "./renderer.js";
 import { generateCSSFromFiles } from "./unocss.js";
 import { bundle } from "./bundler.js";
-
-/**
- * Check if a route is dynamic (contains [param])
- */
-export function isDynamicRoute(filePath) {
-  return /\[([^\]]+)\]/.test(filePath);
-}
 
 // Inline JSX runtime for bundled output
 const INLINE_JSX_RUNTIME = `
@@ -89,88 +81,6 @@ export async function buildFile(inputFile, options = {}) {
 }
 
 /**
- * Build a dynamic route (e.g., [slug].jsx)
- */
-export async function buildDynamicRoute(inputFile, options = {}) {
-  const { outputDir = "dist", silent = false } = options;
-
-  const outDir = resolve(process.cwd(), outputDir);
-  const resolvedInput = resolve(process.cwd(), inputFile);
-
-  // Bundle the file with all its dependencies
-  const bundledCode = await bundle(resolvedInput);
-
-  // Add inline JSX runtime
-  const codeWithRuntime = INLINE_JSX_RUNTIME + bundledCode;
-
-  // Write transformed JS temporarily
-  const tempFile = join(outDir, `_temp_${Date.now()}.js`);
-  await mkdir(dirname(tempFile), { recursive: true });
-  await writeFile(tempFile, codeWithRuntime);
-
-  // Import module
-  const moduleUrl = new URL(`file://${tempFile}?t=${Date.now()}`);
-  const module = await import(moduleUrl.href);
-
-  if (!module.getStaticPaths) {
-    throw new Error(
-      `Dynamic route ${inputFile} must export a getStaticPaths function`
-    );
-  }
-
-  const pathsData = await module.getStaticPaths();
-  const paths = Array.isArray(pathsData) ? pathsData : pathsData.paths || [];
-
-  const App = module.default;
-  if (!App) {
-    throw new Error(`No default export found in ${inputFile}`);
-  }
-
-  const outputs = [];
-
-  for (const pathData of paths) {
-    const params = pathData.params || {};
-
-    let vnode = typeof App === "function" ? App({ params }) : App;
-    if (vnode instanceof Promise) {
-      vnode = await vnode;
-    }
-
-    const html = renderToString(vnode);
-
-    // Determine output path from params
-    const routeDir = dirname(relative(join(process.cwd(), "pages"), resolvedInput));
-    const fileName = basename(resolvedInput, ".jsx");
-
-    // Replace [param] with actual value
-    let outputPath = fileName;
-    for (const [key, value] of Object.entries(params)) {
-      outputPath = outputPath.replace(`[${key}]`, value);
-    }
-
-    const fullOutputPath = join(
-      outDir,
-      routeDir === "." ? "" : routeDir,
-      `${outputPath}.html`
-    );
-
-    await mkdir(dirname(fullOutputPath), { recursive: true });
-    await writeFile(fullOutputPath, html);
-
-    outputs.push({ outputPath: fullOutputPath, html, params });
-
-    if (!silent) {
-      console.log(`  ✓ ${relative(process.cwd(), fullOutputPath)}`);
-    }
-  }
-
-  // Clean up temp file
-  await import("node:fs/promises").then((fs) => fs.unlink(tempFile).catch(() => {}));
-
-  return outputs;
-}
-
-/**
  * Build multiple JSX files
  */
 export async function buildFiles(inputPattern, options = {}) {
@@ -186,22 +96,11 @@ export async function buildFiles(inputPattern, options = {}) {
   const results = [];
 
   for (const file of files) {
-    if (isDynamicRoute(file)) {
-      if (!silent) {
-        const relativePath = relative(process.cwd(), file);
-        const pathsData = await getDynamicRoutePaths(file);
-        const count = Array.isArray(pathsData) ? pathsData.length : pathsData.paths?.length || 0;
-        console.log(`Building dynamic route ${relativePath} (${count} pages)...`);
-      }
-      const outputs = await buildDynamicRoute(file, { outputDir, silent: true });
-      results.push(...outputs);
-    } else {
-      if (!silent) {
-        console.log(`Building ${relative(process.cwd(), file)}...`);
-      }
-      const result = await buildFile(file, { outputDir, unocssConfig, silent: true });
-      results.push(result);
+    if (!silent) {
+      console.log(`Building ${relative(process.cwd(), file)}...`);
     }
+    const result = await buildFile(file, { outputDir, unocssConfig, silent: true });
+    results.push(result);
   }
 
   return results;
@@ -226,35 +125,6 @@ async function getAllJSXFiles(dir) {
   }
 
   return files;
-}
-
-/**
- * Helper to get paths from a dynamic route
- */
-/**
- * Helper to get paths from a dynamic route
- */
-export async function getDynamicRoutePaths(file) {
-  const outDir = resolve(process.cwd(), "dist");
-
-  // Bundle the file with all its dependencies
-  const bundledCode = await bundle(file);
-
-  // Add inline JSX runtime
-  const codeWithRuntime = INLINE_JSX_RUNTIME + bundledCode;
-
-  const tempFile = join(outDir, `_temp_paths_${Date.now()}.js`);
-  await mkdir(dirname(tempFile), { recursive: true });
-  await writeFile(tempFile, codeWithRuntime);
-
-  const moduleUrl = new URL(`file://${tempFile}?t=${Date.now()}`);
-  const module = await import(moduleUrl.href);
-
-  const pathsData = module.getStaticPaths ? await module.getStaticPaths() : [];
-
-  await import("node:fs/promises").then((fs) => fs.unlink(tempFile).catch(() => {}));
-
-  return pathsData;
 }
 
 /**
