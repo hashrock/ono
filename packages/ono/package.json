@@ -10,7 +10,7 @@
     "./renderer": "./src/renderer.js",
     "./transformer": "./src/transformer.js",
     "./bundler": "./src/bundler.js",
-    "./content": "./src/content.js",
+    "./barrels": "./src/barrels.js",
     "./browser/compiler": "./src/browser/compiler.js",
     "./browser/unocss": "./src/browser/unocss.js"
   },
@@ -54,7 +54,6 @@
   "dependencies": {
     "@unocss/preset-uno": "^66.5.4",
     "h3": "^2.0.1-rc.5",
-    "marked": "^16.4.1",
     "typescript": "^5.9.3",
     "unocss": "^66.5.4",
     "ws": "^8.18.3"

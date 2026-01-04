@@ -11,6 +11,7 @@ import { loadUnoConfig } from "./unocss.js";
 import { createDevServer } from "./server.js";
 import { buildFile, buildFiles, generateUnoCSS } from "./builder.js";
 import { watchFile, watchFiles, createWebSocketServer } from "./watcher.js";
+import { generateBarrels } from "./barrels.js";
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -75,6 +76,13 @@ Examples:
 
   const unocssConfig = await loadUnoConfig();
 
+  // Generate barrel files if barrels directory exists
+  const barrelsDir = resolve(process.cwd(), "barrels");
+  if (existsSync(barrelsDir)) {
+    console.log("Generating barrel files...");
+    await generateBarrels(barrelsDir);
+  }
+
   // Check if input is a directory or a file
   const inputPath = resolve(process.cwd(), input);
   const inputStat = await stat(inputPath);
@@ -108,6 +116,13 @@ async function runDevCommand() {
     : "dist";
 
   const unocssConfig = await loadUnoConfig();
+
+  // Generate barrel files if barrels directory exists
+  const barrelsDir = resolve(process.cwd(), "barrels");
+  if (existsSync(barrelsDir)) {
+    console.log("Generating barrel files...");
+    await generateBarrels(barrelsDir);
+  }
 
   // Initial build
   const inputPath = resolve(process.cwd(), input);
