@@ -1,12 +1,7 @@
 /**
  * Renderer - Convert VNodes to HTML strings
  */
-
-// Self-closing HTML tags
-const SELF_CLOSING_TAGS = new Set([
-  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
-  'link', 'meta', 'param', 'source', 'track', 'wbr'
-]);
+import { SELF_CLOSING_TAGS } from "./constants.js";
 
 /**
  * Escape HTML special characters to prevent XSS

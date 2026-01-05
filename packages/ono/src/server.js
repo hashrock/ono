@@ -1,23 +1,24 @@
 /**
  * Dev server using h3
  */
-import { createApp, createRouter, eventHandler, setResponseStatus, setResponseHeader, createError } from "h3";
+import { createApp, eventHandler, setResponseHeader, createError } from "h3";
 import { toNodeHandler } from "h3/node";
 import { createServer } from "node:http";
 import { resolve, join, extname } from "node:path";
 import { readFile } from "node:fs/promises";
+import { DIRS, PORTS, MIME_TYPES, HTTP_STATUS } from "./constants.js";
 
 /**
  * Create a development server
- * @param {object} options - Server options
- * @param {string} options.outputDir - Output directory to serve
- * @param {number} options.port - HTTP port
- * @param {string} options.mode - Server mode: 'pages' or 'single'
- * @param {string} options.indexFile - Index file for single mode
- * @returns {Promise<object>} Server instance
+ * @param {Object} options - Server options
+ * @param {string} [options.outputDir] - Output directory to serve
+ * @param {number} [options.port] - HTTP port
+ * @param {string} [options.mode] - Server mode: 'pages' or 'single'
+ * @param {string} [options.indexFile] - Index file for single mode
+ * @returns {Promise<{server: import('http').Server, app: any, port: number}>}
  */
 export async function createDevServer(options) {
-  const { outputDir = "dist", port = 3000, mode = "pages", indexFile = "index.html" } = options;
+  const { outputDir = DIRS.OUTPUT, port = PORTS.SERVER, mode = "pages", indexFile = "index.html" } = options;
 
   const outDir = resolve(process.cwd(), outputDir);
 
@@ -50,25 +51,7 @@ export async function createDevServer(options) {
         const content = await readFile(filePath);
         const ext = extname(filePath);
 
-        const contentTypes = {
-          ".html": "text/html; charset=utf-8",
-          ".css": "text/css; charset=utf-8",
-          ".js": "text/javascript; charset=utf-8",
-          ".json": "application/json; charset=utf-8",
-          ".png": "image/png",
-          ".jpg": "image/jpeg",
-          ".jpeg": "image/jpeg",
-          ".gif": "image/gif",
-          ".svg": "image/svg+xml",
-          ".ico": "image/x-icon",
-          ".woff": "font/woff",
-          ".woff2": "font/woff2",
-          ".ttf": "font/ttf",
-          ".eot": "application/vnd.ms-fontobject",
-          ".webp": "image/webp",
-        };
-
-        setResponseHeader(event, "Content-Type", contentTypes[ext] || "application/octet-stream");
+        setResponseHeader(event, "Content-Type", MIME_TYPES[ext] || "application/octet-stream");
         return content;
       } catch (error) {
         // Don't log error for missing favicon.ico (browsers request it automatically)
@@ -78,13 +61,13 @@ export async function createDevServer(options) {
         }
         if (error.code === "ENOENT") {
           throw createError({
-            statusCode: 404,
+            statusCode: HTTP_STATUS.NOT_FOUND,
             statusMessage: "Not Found",
             message: isFavicon ? "Favicon not found" : `File not found: ${error.path}`,
           });
         } else {
           throw createError({
-            statusCode: 500,
+            statusCode: HTTP_STATUS.SERVER_ERROR,
             statusMessage: "Internal Server Error",
             message: error.message,
           });

@@ -2,16 +2,19 @@
  * File watcher utilities for Ono SSG
  */
 import { watch } from "node:fs";
-import { resolve, join, relative, extname } from "node:path";
-import { readdir } from "node:fs/promises";
+import { resolve, join, relative } from "node:path";
 import { WebSocketServer } from "ws";
 import { buildFile, buildFiles, generateUnoCSS } from "./builder.js";
 import { generateBarrel } from "./barrels.js";
+import { isJSXFile } from "./utils.js";
+import { PORTS, TIMING, DIRS } from "./constants.js";
 
 /**
  * Create a WebSocket server for live reload
+ * @param {number} [port] - Port number for WebSocket server
+ * @returns {{wss: WebSocketServer, port: number}}
  */
-export function createWebSocketServer(port = 35729) {
+export function createWebSocketServer(port = PORTS.WEBSOCKET) {
   let wss;
   let actualPort = port;
 
@@ -32,6 +35,7 @@ export function createWebSocketServer(port = 35729) {
 
 /**
  * Broadcast reload message to all connected clients
+ * @param {WebSocketServer} wss - WebSocket server instance
  */
 export function broadcastReload(wss) {
   wss.clients.forEach((client) => {
@@ -43,12 +47,19 @@ export function broadcastReload(wss) {
 
 /**
  * Watch for file changes and rebuild
+ * @param {string} inputPattern - Input directory to watch
+ * @param {Object} options - Watch options
+ * @param {string} [options.outputDir] - Output directory
+ * @param {Object} [options.unocssConfig] - UnoCSS configuration
+ * @param {Function} [options.onRebuild] - Callback after rebuild
+ * @param {WebSocketServer} [options.wss] - WebSocket server for live reload
+ * @returns {Promise<{watcher: any, publicWatcher?: any, barrelsWatcher?: any}>}
  */
 export async function watchFiles(inputPattern, options = {}) {
-  const { outputDir = "dist", unocssConfig, onRebuild, wss } = options;
+  const { outputDir = DIRS.OUTPUT, unocssConfig, onRebuild, wss } = options;
 
   const pagesDir = resolve(process.cwd(), inputPattern);
-  const publicDir = resolve(process.cwd(), "public");
+  const publicDir = resolve(process.cwd(), DIRS.PUBLIC);
 
   console.log(`👀 Watching for changes in ${inputPattern}/ and public/...`);
 
@@ -74,12 +85,12 @@ export async function watchFiles(inputPattern, options = {}) {
       } catch (error) {
         console.error("❌ Build error:", error.message);
       }
-    }, 100);
+    }, TIMING.DEBOUNCE_MS);
   };
 
   // Watch pages directory
   const watcher = watch(pagesDir, { recursive: true }, async (eventType, filename) => {
-    if (filename && filename.endsWith(".jsx")) {
+    if (filename && isJSXFile(filename)) {
       const filePath = join(pagesDir, filename);
       await debouncedRebuild(filePath);
     }
@@ -111,11 +122,11 @@ export async function watchFiles(inputPattern, options = {}) {
   }
 
   // Watch barrels directory if it exists
-  const barrelsDir = resolve(process.cwd(), "barrels");
+  const barrelsDir = resolve(process.cwd(), DIRS.BARRELS);
   let barrelsWatcher;
   try {
     barrelsWatcher = watch(barrelsDir, { recursive: true }, async (eventType, filename) => {
-      if (filename && (filename.endsWith(".tsx") || filename.endsWith(".jsx"))) {
+      if (filename && isJSXFile(filename)) {
         // Extract barrel name from path (e.g., "blog/post1.tsx" -> "blog")
         const barrelName = filename.split("/")[0];
         const barrelDir = join(barrelsDir, barrelName);
@@ -151,9 +162,16 @@ export async function watchFiles(inputPattern, options = {}) {
 
 /**
  * Watch a single file for changes
+ * @param {string} inputFile - Input file to watch
+ * @param {Object} options - Watch options
+ * @param {string} [options.outputDir] - Output directory
+ * @param {Object} [options.unocssConfig] - UnoCSS configuration
+ * @param {Function} [options.onRebuild] - Callback after rebuild
+ * @param {WebSocketServer} [options.wss] - WebSocket server for live reload
+ * @returns {Promise<{watcher: any}>}
  */
 export async function watchFile(inputFile, options = {}) {
-  const { outputDir = "dist", unocssConfig, onRebuild, wss } = options;
+  const { outputDir = DIRS.OUTPUT, unocssConfig, onRebuild, wss } = options;
 
   const resolvedInput = resolve(process.cwd(), inputFile);
 
@@ -181,7 +199,7 @@ export async function watchFile(inputFile, options = {}) {
       } catch (error) {
         console.error("❌ Build error:", error.message);
       }
-    }, 100);
+    }, TIMING.DEBOUNCE_MS);
   };
 
   const watcher = watch(resolvedInput, debouncedRebuild);
