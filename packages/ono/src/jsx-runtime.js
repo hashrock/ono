@@ -2,29 +2,7 @@
  * JSX Runtime - createElement function
  * Creates a VNode (Virtual Node) from JSX
  */
-
-/**
- * Flatten array recursively and filter out falsy values
- */
-function flattenChildren(children) {
-  const result = [];
-
-  for (const child of children) {
-    if (child === null || child === undefined || typeof child === 'boolean') {
-      // Skip null, undefined, and boolean values
-      continue;
-    }
-
-    if (Array.isArray(child)) {
-      // Recursively flatten arrays
-      result.push(...flattenChildren(child));
-    } else {
-      result.push(child);
-    }
-  }
-
-  return result;
-}
+import { flattenChildren } from "./utils.js";
 
 /**
  * Create a VNode

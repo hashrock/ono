@@ -1,16 +1,10 @@
 /**
  * Barrels - Auto-generated barrel files with type inference
  */
-import { readdir, writeFile, mkdir } from "node:fs/promises";
+import { readdir, writeFile } from "node:fs/promises";
 import { join, basename, dirname, relative } from "node:path";
 import { bundle } from "./bundler.js";
-
-/**
- * Convert kebab-case or snake_case to camelCase
- */
-function toCamelCase(str) {
-  return str.replace(/[-_]([a-z])/g, (_, c) => c.toUpperCase());
-}
+import { toCamelCase, cleanupTempFile, isJSXFile } from "./utils.js";
 
 /**
  * Infer TypeScript type from a JavaScript value
@@ -66,6 +60,8 @@ function generateMetaType(metas) {
 
 /**
  * Get all entry files from a barrel directory
+ * @param {string} barrelDir - Directory to scan for barrel entries
+ * @returns {Promise<Array<{id: string, file: string, path: string}>>}
  */
 async function getBarrelEntries(barrelDir) {
   const entries = [];
@@ -74,8 +70,9 @@ async function getBarrelEntries(barrelDir) {
     const files = await readdir(barrelDir, { withFileTypes: true });
 
     for (const file of files) {
-      if (file.isFile() && (file.name.endsWith(".tsx") || file.name.endsWith(".jsx"))) {
-        const id = basename(file.name, file.name.endsWith(".tsx") ? ".tsx" : ".jsx");
+      if (file.isFile() && isJSXFile(file.name)) {
+        const ext = file.name.endsWith(".tsx") ? ".tsx" : ".jsx";
+        const id = basename(file.name, ext);
         entries.push({
           id,
           file: file.name,
@@ -92,19 +89,19 @@ async function getBarrelEntries(barrelDir) {
 
 /**
  * Load meta from an entry file by bundling and evaluating
+ * @param {string} entryPath - Path to the entry file
+ * @returns {Promise<Object|null>} Meta object or null
  */
 async function loadMeta(entryPath) {
+  const tempDir = dirname(entryPath);
+  const tempFile = join(tempDir, `_temp_meta_${Date.now()}.js`);
+
   try {
     // Bundle the file to resolve imports
     const bundledCode = await bundle(entryPath);
 
-    // Create a temporary module to extract meta
-    const tempDir = dirname(entryPath);
-    const tempFile = join(tempDir, `_temp_meta_${Date.now()}.js`);
-
     // Add JSX runtime and extract meta
-    const code = `
-function h(tag, props, ...children) {
+    const code = `function h(tag, props, ...children) {
   return { tag, props: props || {}, children };
 }
 ${bundledCode}
@@ -112,17 +109,15 @@ ${bundledCode}
 
     await writeFile(tempFile, code);
 
-    try {
-      const moduleUrl = new URL(`file://${tempFile}?t=${Date.now()}`);
-      const module = await import(moduleUrl.href);
-      return module.meta || null;
-    } finally {
-      // Clean up
-      await import("node:fs/promises").then((fs) => fs.unlink(tempFile).catch(() => {}));
-    }
+    const moduleUrl = new URL(`file://${tempFile}?t=${Date.now()}`);
+    const module = await import(moduleUrl.href);
+    return module.meta || null;
   } catch (error) {
     console.warn(`Warning: Could not load meta from ${entryPath}:`, error.message);
     return null;
+  } finally {
+    // Clean up
+    await cleanupTempFile(tempFile);
   }
 }
 

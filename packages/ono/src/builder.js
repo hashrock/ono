@@ -1,36 +1,25 @@
 /**
  * Build utilities for Ono SSG
  */
-import { writeFile, mkdir, readdir } from "node:fs/promises";
+import { writeFile, mkdir } from "node:fs/promises";
 import { resolve, join, dirname, basename, relative } from "node:path";
 import { renderToString } from "./renderer.js";
 import { generateCSSFromFiles } from "./unocss.js";
 import { bundle } from "./bundler.js";
-
-// Inline JSX runtime for bundled output
-const INLINE_JSX_RUNTIME = `
-function flattenChildren(children) {
-  const result = [];
-  for (const child of children) {
-    if (child === null || child === undefined || typeof child === 'boolean') continue;
-    if (Array.isArray(child)) {
-      result.push(...flattenChildren(child));
-    } else {
-      result.push(child);
-    }
-  }
-  return result;
-}
-function h(tag, props, ...children) {
-  return { tag, props: props || {}, children: flattenChildren(children) };
-}
-`;
+import { cleanupTempFile, getFilesRecursively, isJSXFile, isHTMLFile } from "./utils.js";
+import { INLINE_JSX_RUNTIME, DIRS } from "./constants.js";
 
 /**
  * Build a single JSX file
+ * @param {string} inputFile - Path to the JSX file
+ * @param {Object} options - Build options
+ * @param {string} [options.outputDir] - Output directory
+ * @param {Object} [options.unocssConfig] - UnoCSS configuration
+ * @param {boolean} [options.silent] - Suppress console output
+ * @returns {Promise<{outputPath: string, html: string}>}
  */
 export async function buildFile(inputFile, options = {}) {
-  const { outputDir = "dist", unocssConfig, silent = false } = options;
+  const { outputDir = DIRS.OUTPUT, unocssConfig, silent = false } = options;
 
   const outDir = resolve(process.cwd(), outputDir);
   const resolvedInput = resolve(process.cwd(), inputFile);
@@ -39,7 +28,7 @@ export async function buildFile(inputFile, options = {}) {
   const bundledCode = await bundle(resolvedInput);
 
   // Add inline JSX runtime
-  const codeWithRuntime = INLINE_JSX_RUNTIME + bundledCode;
+  const codeWithRuntime = INLINE_JSX_RUNTIME + "\n" + bundledCode;
 
   // Write transformed JS temporarily
   const tempFile = join(outDir, `_temp_${Date.now()}.js`);
@@ -75,19 +64,25 @@ export async function buildFile(inputFile, options = {}) {
   }
 
   // Clean up temp file
-  await import("node:fs/promises").then((fs) => fs.unlink(tempFile).catch(() => {}));
+  await cleanupTempFile(tempFile);
 
   return { outputPath, html };
 }
 
 /**
  * Build multiple JSX files
+ * @param {string} inputPattern - Input directory path
+ * @param {Object} options - Build options
+ * @param {string} [options.outputDir] - Output directory
+ * @param {Object} [options.unocssConfig] - UnoCSS configuration
+ * @param {boolean} [options.silent] - Suppress console output
+ * @returns {Promise<Array<{outputPath: string, html: string}>>}
  */
 export async function buildFiles(inputPattern, options = {}) {
-  const { outputDir = "dist", unocssConfig, silent = false } = options;
+  const { outputDir = DIRS.OUTPUT, unocssConfig, silent = false } = options;
 
   const pagesDir = resolve(process.cwd(), inputPattern);
-  const files = await getAllJSXFiles(pagesDir);
+  const files = await getFilesRecursively(pagesDir, isJSXFile);
 
   if (!silent) {
     console.log(`Found ${files.length} page(s) in ${inputPattern}/\n`);
@@ -107,36 +102,20 @@ export async function buildFiles(inputPattern, options = {}) {
 }
 
 /**
- * Get all JSX files recursively
- */
-async function getAllJSXFiles(dir) {
-  const files = [];
-  const entries = await readdir(dir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const fullPath = join(dir, entry.name);
-
-    if (entry.isDirectory()) {
-      const subFiles = await getAllJSXFiles(fullPath);
-      files.push(...subFiles);
-    } else if (entry.isFile() && entry.name.endsWith(".jsx")) {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
-}
-
-/**
  * Generate UnoCSS file
+ * @param {Object} options - Generation options
+ * @param {string} [options.outputDir] - Output directory
+ * @param {Object} [options.unocssConfig] - UnoCSS configuration
+ * @param {boolean} [options.silent] - Suppress console output
+ * @returns {Promise<string|null>} CSS file path or null
  */
 export async function generateUnoCSS(options = {}) {
-  const { outputDir = "dist", unocssConfig, silent = false } = options;
+  const { outputDir = DIRS.OUTPUT, unocssConfig, silent = false } = options;
 
   const outDir = resolve(process.cwd(), outputDir);
 
   // Scan all HTML files
-  const htmlFiles = await getAllHTMLFiles(outDir);
+  const htmlFiles = await getFilesRecursively(outDir, isHTMLFile);
 
   if (htmlFiles.length === 0) {
     return null;
@@ -157,30 +136,4 @@ export async function generateUnoCSS(options = {}) {
   }
 
   return cssPath;
-}
-
-/**
- * Get all HTML files recursively
- */
-async function getAllHTMLFiles(dir) {
-  const files = [];
-
-  try {
-    const entries = await readdir(dir, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const fullPath = join(dir, entry.name);
-
-      if (entry.isDirectory()) {
-        const subFiles = await getAllHTMLFiles(fullPath);
-        files.push(...subFiles);
-      } else if (entry.isFile() && entry.name.endsWith(".html")) {
-        files.push(fullPath);
-      }
-    }
-  } catch (error) {
-    // Directory might not exist yet
-  }
-
-  return files;
 }
