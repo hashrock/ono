@@ -4,6 +4,36 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { Parser } from "acorn";
+import jsx from "acorn-jsx";
+
+// Create parser with JSX support
+const jsxParser = Parser.extend(jsx());
+
+/**
+ * Recursively walk AST to find ImportDeclaration nodes
+ * @param {Object} node - AST node
+ * @param {Array} imports - Accumulator for imports
+ */
+function walkAST(node, imports) {
+  if (!node || typeof node !== "object") return;
+
+  if (node.type === "ImportDeclaration" && node.source) {
+    imports.push({
+      specifier: node.source.value
+    });
+  }
+
+  // Recursively walk all properties
+  for (const key in node) {
+    const value = node[key];
+    if (Array.isArray(value)) {
+      value.forEach(child => walkAST(child, imports));
+    } else if (value && typeof value === "object") {
+      walkAST(value, imports);
+    }
+  }
+}
 
 /**
  * Parse import statements from source code
@@ -13,18 +43,17 @@ import path from "node:path";
 export function parseImports(code) {
   const imports = [];
 
-  // Match various import patterns:
-  // import foo from "bar"
-  // import { foo } from "bar"
-  // import * as foo from "bar"
-  // import "bar"
-  const importRegex = /import\s+(?:[\w{},\s*]+\s+from\s+)?['"]([^'"]+)['"]/g;
-
-  let match;
-  while ((match = importRegex.exec(code)) !== null) {
-    imports.push({
-      specifier: match[1]
+  try {
+    const ast = jsxParser.parse(code, {
+      ecmaVersion: "latest",
+      sourceType: "module"
     });
+
+    walkAST(ast, imports);
+  } catch (error) {
+    // If parsing fails, fall back to empty array
+    // This allows the code to handle parse errors gracefully
+    console.warn(`Warning: Failed to parse imports: ${error.message}`);
   }
 
   return imports;

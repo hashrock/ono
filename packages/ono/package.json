@@ -53,6 +53,8 @@
   },
   "dependencies": {
     "@unocss/preset-uno": "^66.5.4",
+    "acorn": "^8.15.0",
+    "acorn-jsx": "^5.3.2",
     "h3": "^2.0.1-rc.5",
     "typescript": "^5.9.3",
     "unocss": "^66.5.4",
