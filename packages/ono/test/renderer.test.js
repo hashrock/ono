@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert";
-import { createElement } from "../src/jsx-runtime.js";
+import { createElement, Fragment } from "../src/jsx-runtime.js";
 import { renderToString } from "../src/renderer.js";
 
 test("renderToString - simple text", () => {
@@ -155,4 +155,60 @@ test("renderToString - aria attributes", () => {
   const vnode = createElement("button", { "aria-label": "Close", "aria-hidden": "true" });
   const result = renderToString(vnode);
   assert.strictEqual(result, '<button aria-label="Close" aria-hidden="true"></button>');
+});
+
+test("renderToString - Fragment with multiple elements", () => {
+  const vnode = createElement(Fragment, null,
+    createElement("div", null, "Item 1"),
+    createElement("div", null, "Item 2")
+  );
+  const result = renderToString(vnode);
+  assert.strictEqual(result, "<div>Item 1</div><div>Item 2</div>");
+});
+
+test("renderToString - Fragment with text children", () => {
+  const vnode = createElement(Fragment, null, "Hello", " ", "World");
+  const result = renderToString(vnode);
+  assert.strictEqual(result, "Hello World");
+});
+
+test("renderToString - empty Fragment", () => {
+  const vnode = createElement(Fragment);
+  const result = renderToString(vnode);
+  assert.strictEqual(result, "");
+});
+
+test("renderToString - nested Fragment", () => {
+  const vnode = createElement("div", null,
+    createElement(Fragment, null,
+      createElement("span", null, "A"),
+      createElement("span", null, "B")
+    )
+  );
+  const result = renderToString(vnode);
+  assert.strictEqual(result, "<div><span>A</span><span>B</span></div>");
+});
+
+test("renderToString - Fragment inside component", () => {
+  function List() {
+    return createElement(Fragment, null,
+      createElement("li", null, "Item 1"),
+      createElement("li", null, "Item 2"),
+      createElement("li", null, "Item 3")
+    );
+  }
+
+  const vnode = createElement("ul", null, createElement(List));
+  const result = renderToString(vnode);
+  assert.strictEqual(result, "<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>");
+});
+
+test("renderToString - Fragment with mixed content", () => {
+  const vnode = createElement(Fragment, null,
+    "Text before",
+    createElement("strong", null, "bold"),
+    "Text after"
+  );
+  const result = renderToString(vnode);
+  assert.strictEqual(result, "Text before<strong>bold</strong>Text after");
 });

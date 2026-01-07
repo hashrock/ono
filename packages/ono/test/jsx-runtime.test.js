@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert";
-import { createElement } from "../src/jsx-runtime.js";
+import { createElement, Fragment } from "../src/jsx-runtime.js";
 
 test("createElement - simple element without props", () => {
   const result = createElement("div");
@@ -118,4 +118,44 @@ test("createElement - component function", () => {
 
   assert.strictEqual(typeof result.tag, "function");
   assert.deepStrictEqual(result.props, { name: "test" });
+});
+
+test("Fragment - is a symbol", () => {
+  assert.strictEqual(typeof Fragment, "symbol");
+  assert.strictEqual(Fragment.description, "ono.fragment");
+});
+
+test("createElement - Fragment with children", () => {
+  const child1 = createElement("div", null, "Item 1");
+  const child2 = createElement("div", null, "Item 2");
+  const result = createElement(Fragment, null, child1, child2);
+
+  assert.strictEqual(result.tag, Fragment);
+  assert.deepStrictEqual(result.props, {});
+  assert.strictEqual(result.children.length, 2);
+  assert.deepStrictEqual(result.children[0], {
+    tag: "div",
+    props: {},
+    children: ["Item 1"]
+  });
+  assert.deepStrictEqual(result.children[1], {
+    tag: "div",
+    props: {},
+    children: ["Item 2"]
+  });
+});
+
+test("createElement - Fragment with no children", () => {
+  const result = createElement(Fragment);
+
+  assert.strictEqual(result.tag, Fragment);
+  assert.deepStrictEqual(result.props, {});
+  assert.deepStrictEqual(result.children, []);
+});
+
+test("createElement - Fragment with text children", () => {
+  const result = createElement(Fragment, null, "Hello", " ", "World");
+
+  assert.strictEqual(result.tag, Fragment);
+  assert.deepStrictEqual(result.children, ["Hello", " ", "World"]);
 });
