@@ -122,3 +122,35 @@ test("transformJSX - add jsx-runtime import", () => {
   // Should have import for h function
   assert.ok(result.includes('import') || result.includes('h('));
 });
+
+test("transformJSX - Fragment short syntax", () => {
+  const input = `const elem = <><div>A</div><div>B</div></>;`;
+  const result = transformJSX(input);
+
+  assert.ok(result.includes('h(Fragment'));
+  assert.ok(result.includes('h("div"'));
+});
+
+test("transformJSX - empty Fragment", () => {
+  const input = `const elem = <></>;`;
+  const result = transformJSX(input);
+
+  assert.ok(result.includes('h(Fragment'));
+});
+
+test("transformJSX - Fragment with text children", () => {
+  const input = `const elem = <>Hello World</>;`;
+  const result = transformJSX(input);
+
+  assert.ok(result.includes('h(Fragment'));
+  assert.ok(result.includes('Hello World'));
+});
+
+test("transformJSX - nested Fragment", () => {
+  const input = `const elem = <div><>A<span>B</span></></div>;`;
+  const result = transformJSX(input);
+
+  assert.ok(result.includes('h(Fragment'));
+  assert.ok(result.includes('h("div"'));
+  assert.ok(result.includes('h("span"'));
+});

@@ -5,6 +5,11 @@
 import { flattenChildren } from "./utils.js";
 
 /**
+ * Fragment symbol for grouping elements without a wrapper
+ */
+export const Fragment = Symbol.for("ono.fragment");
+
+/**
  * Create a VNode
  * @param {string|Function} tag - HTML tag name or component function
  * @param {Object} props - Element properties/attributes

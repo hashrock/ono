@@ -15,6 +15,7 @@ export function transformJSX(source, filename = 'input.jsx') {
   const compilerOptions = {
     jsx: ts.JsxEmit.React,
     jsxFactory: 'h',
+    jsxFragmentFactory: 'Fragment',
     module: ts.ModuleKind.ESNext,
     target: ts.ScriptTarget.ESNext,
     esModuleInterop: true,
@@ -40,8 +41,10 @@ export function transformJSXWithImports(source, filename = 'input.jsx') {
 
   // Check if the code uses 'h' function (JSX was transformed)
   if (transformedCode.includes('h(') && !source.includes('import') && !source.includes('from')) {
-    // Add import statement for h function
-    transformedCode = `import { h } from './jsx-runtime.js';\n${transformedCode}`;
+    // Add import statement for h function (and Fragment if used)
+    const usesFragment = transformedCode.includes('Fragment');
+    const imports = usesFragment ? '{ h, Fragment }' : '{ h }';
+    transformedCode = `import ${imports} from './jsx-runtime.js';\n${transformedCode}`;
   }
 
   return transformedCode;

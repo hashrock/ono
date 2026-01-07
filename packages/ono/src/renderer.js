@@ -2,6 +2,7 @@
  * Renderer - Convert VNodes to HTML strings
  */
 import { SELF_CLOSING_TAGS } from "./constants.js";
+import { Fragment } from "./jsx-runtime.js";
 
 /**
  * Escape HTML special characters to prevent XSS
@@ -94,6 +95,13 @@ export function renderToString(vnode) {
 
   // Handle VNode object
   const { tag, props, children } = vnode;
+
+  // Handle Fragment - render children without wrapper element
+  if (tag === Fragment) {
+    return children && children.length > 0
+      ? children.map(child => renderToString(child)).join('')
+      : '';
+  }
 
   // Handle component functions
   if (typeof tag === 'function') {
