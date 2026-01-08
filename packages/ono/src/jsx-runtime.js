@@ -2,7 +2,7 @@
  * JSX Runtime - createElement function
  * Creates a VNode (Virtual Node) from JSX
  */
-import { flattenChildren } from "./utils.js";
+import { flattenChildren } from "./utils.browser.js";
 
 /**
  * Fragment symbol for grouping elements without a wrapper
