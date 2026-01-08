@@ -25,7 +25,8 @@ export async function buildFile(inputFile, options = {}) {
   const resolvedInput = resolve(process.cwd(), inputFile);
 
   // Bundle the file with all its dependencies
-  const bundledCode = await bundle(resolvedInput);
+  const bundleResult = await bundle(resolvedInput, { outputDir: outDir });
+  const bundledCode = bundleResult.code;
 
   // Add inline JSX runtime
   const codeWithRuntime = INLINE_JSX_RUNTIME + "\n" + bundledCode;

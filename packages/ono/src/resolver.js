@@ -4,6 +4,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { isAssetFile } from "./asset-loader.js";
 
 /**
  * Parse import statements from source code
@@ -86,10 +87,11 @@ function topologicalSort(graph) {
 /**
  * Collect all dependencies recursively
  * @param {string} entryFile - Absolute path to entry file
- * @returns {Object} Object with modules (Set), graph (Map), and order (Array)
+ * @returns {Object} Object with modules (Set), graph (Map), order (Array), and assets (Set)
  */
 export async function collectDependencies(entryFile) {
   const modules = new Set();
+  const assets = new Set();
   const graph = new Map();
   const queue = [entryFile];
 
@@ -98,7 +100,13 @@ export async function collectDependencies(entryFile) {
     const currentFile = queue.shift();
 
     // Skip if already processed
-    if (modules.has(currentFile)) continue;
+    if (modules.has(currentFile) || assets.has(currentFile)) continue;
+
+    // Check if it's an asset file
+    if (isAssetFile(currentFile)) {
+      assets.add(currentFile);
+      continue; // Assets don't have dependencies to process
+    }
 
     // Read the file
     let source;
@@ -132,6 +140,7 @@ export async function collectDependencies(entryFile) {
   return {
     modules,
     graph,
-    order
+    order,
+    assets
   };
 }
