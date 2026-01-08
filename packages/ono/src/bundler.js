@@ -3,10 +3,10 @@
  */
 
 import fs from "node:fs/promises";
-import path from "node:path";
 import { collectDependencies } from "./resolver.js";
 import { transformJSX } from "./transformer.js";
-import { copyAsset, replaceAssetImports } from "./asset-loader.js";
+import { createPluginManager } from "./plugins/plugin-manager.js";
+import { createAssetLoaderPlugin } from "./plugins/asset-loader-plugin.js";
 
 /**
  * Bundle a JSX file and all its dependencies
@@ -15,38 +15,34 @@ import { copyAsset, replaceAssetImports } from "./asset-loader.js";
  * @param {string} [options.outputDir] - Output directory for assets
  * @param {boolean} [options.hashAssets=true] - Add hash to asset filenames
  * @param {string} [options.assetsDir='assets'] - Assets subdirectory name
+ * @param {Array} [options.plugins=[]] - Array of bundler plugins
  * @returns {Promise<{code: string, assets: Array}>} Bundled code and processed assets
  */
 export async function bundle(entryFile, options = {}) {
-  const { outputDir, hashAssets = true, assetsDir = 'assets' } = options;
+  const {
+    outputDir,
+    hashAssets = true,
+    assetsDir = 'assets',
+    plugins = []
+  } = options;
+
+  // Auto-add asset loader plugin if outputDir is provided (backward compatibility)
+  const allPlugins = [...plugins];
+  if (outputDir && !allPlugins.some(p => p.name === 'asset-loader')) {
+    allPlugins.push(createAssetLoaderPlugin({ outputDir, hashAssets, assetsDir }));
+  }
+
+  // Create plugin manager
+  const pluginManager = createPluginManager(allPlugins);
 
   // Collect all dependencies (including assets)
-  const { order, assets } = await collectDependencies(entryFile);
+  const dependencyData = await collectDependencies(entryFile);
 
+  // Execute collectDependencies hook for plugins (e.g., to process assets)
+  await pluginManager.executeHook('collectDependencies', dependencyData);
+
+  const { order } = dependencyData;
   const modules = [];
-  const assetMap = new Map(); // Map of original import path to public path
-  const processedAssets = [];
-
-  // Process assets if output directory is provided
-  if (outputDir && assets.size > 0) {
-    for (const assetPath of assets) {
-      const { outputPath, publicPath } = await copyAsset(assetPath, outputDir, {
-        hash: hashAssets,
-        assetsDir
-      });
-
-      processedAssets.push({
-        sourcePath: assetPath,
-        outputPath,
-        publicPath
-      });
-
-      // Map relative import paths to public paths
-      // We need to handle how this asset was imported
-      // For now, we'll use the full path and handle relative paths in the replacement
-      assetMap.set(assetPath, publicPath);
-    }
-  }
 
   // Process each module in dependency order
   for (let i = 0; i < order.length; i++) {
@@ -59,10 +55,15 @@ export async function bundle(entryFile, options = {}) {
     // Transform JSX to JS
     let transformed = transformJSX(source, filePath);
 
-    // Replace asset imports with their public paths
-    if (assetMap.size > 0) {
-      transformed = replaceAssetImportsInModule(transformed, source, filePath, assetMap);
-    }
+    // Execute afterTransform hook (e.g., to replace asset imports)
+    const transformData = await pluginManager.executeHook('afterTransform', {
+      transformed,
+      source,
+      filePath,
+      isEntry
+    });
+
+    transformed = transformData.transformed;
 
     // Remove import statements (they're already resolved)
     const withoutImports = removeImports(transformed);
@@ -80,45 +81,16 @@ export async function bundle(entryFile, options = {}) {
   // Combine all modules into one
   const bundledCode = modules.map(m => m.code).join("\n\n");
 
-  return {
+  // Create initial bundle result
+  let bundleResult = {
     code: bundledCode,
-    assets: processedAssets
+    assets: []
   };
-}
 
-/**
- * Replace asset imports in a module with their public paths
- * @param {string} transformed - Transformed code
- * @param {string} source - Original source code
- * @param {string} filePath - Current file path
- * @param {Map<string, string>} assetMap - Map of absolute asset path to public path
- * @returns {string} Code with asset imports replaced
- */
-function replaceAssetImportsInModule(transformed, source, filePath, assetMap) {
-  const imports = source.match(/import\s+(?:[\w{},\s*]+\s+from\s+)?['"]([^'"]+)['"]/g);
+  // Execute afterBundle hook (e.g., to add processed assets)
+  bundleResult = await pluginManager.executeHook('afterBundle', bundleResult);
 
-  if (!imports) return transformed;
-
-  // Create a map of relative import path to public path for this file
-  const relativeAssetMap = new Map();
-
-  for (const importStatement of imports) {
-    const match = importStatement.match(/from\s+['"]([^'"]+)['"]/);
-    if (!match) continue;
-
-    const importPath = match[1];
-    if (!importPath.startsWith('.')) continue;
-
-    // Resolve the import path relative to current file
-    const resolvedPath = path.resolve(path.dirname(filePath), importPath);
-
-    // Check if this resolved path is in our asset map
-    if (assetMap.has(resolvedPath)) {
-      relativeAssetMap.set(importPath, assetMap.get(resolvedPath));
-    }
-  }
-
-  return replaceAssetImports(transformed, relativeAssetMap);
+  return bundleResult;
 }
 
 /**
