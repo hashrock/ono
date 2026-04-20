@@ -7,7 +7,7 @@ import { WebSocketServer } from "ws";
 import { buildFile, buildFiles, generateUnoCSS } from "./builder.js";
 import { generateBarrel } from "./barrels.js";
 import { isJSXFile } from "./utils.js";
-import { PORTS, TIMING, DIRS } from "./constants.js";
+import { PORTS, TIMING, DIRS, ERROR_CODES } from "./constants.js";
 
 /**
  * Create a WebSocket server for live reload
@@ -15,22 +15,14 @@ import { PORTS, TIMING, DIRS } from "./constants.js";
  * @returns {{wss: WebSocketServer, port: number}}
  */
 export function createWebSocketServer(port = PORTS.WEBSOCKET) {
-  let wss;
-  let actualPort = port;
-
   try {
-    wss = new WebSocketServer({ port });
+    return { wss: new WebSocketServer({ port }), port };
   } catch (error) {
-    if (error.code === "EADDRINUSE") {
-      actualPort = port + 1;
-      console.log(`ℹ️  WebSocket port ${port} is busy, using port ${actualPort} instead`);
-      wss = new WebSocketServer({ port: actualPort });
-    } else {
-      throw error;
-    }
+    if (error.code !== ERROR_CODES.PORT_IN_USE) throw error;
+    const actualPort = port + 1;
+    console.log(`ℹ️  WebSocket port ${port} is busy, using port ${actualPort} instead`);
+    return { wss: new WebSocketServer({ port: actualPort }), port: actualPort };
   }
-
-  return { wss, port: actualPort };
 }
 
 /**
@@ -46,6 +38,31 @@ export function broadcastReload(wss) {
 }
 
 /**
+ * Create a debounced async runner that logs errors instead of throwing.
+ */
+function debounce(fn, ms = TIMING.DEBOUNCE_MS) {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(async () => {
+      try {
+        await fn(...args);
+      } catch (error) {
+        console.error("❌ Build error:", error.message);
+      }
+    }, ms);
+  };
+}
+
+/**
+ * Notify clients and trigger onRebuild callback.
+ */
+async function afterRebuild({ onRebuild, wss }) {
+  if (onRebuild) await onRebuild();
+  if (wss) broadcastReload(wss);
+}
+
+/**
  * Watch for file changes and rebuild
  * @param {string} inputPattern - Input directory to watch
  * @param {Object} options - Watch options
@@ -57,103 +74,63 @@ export function broadcastReload(wss) {
  */
 export async function watchFiles(inputPattern, options = {}) {
   const { outputDir = DIRS.OUTPUT, unocssConfig, onRebuild, wss } = options;
+  const buildOpts = { outputDir, unocssConfig, silent: false };
 
   const pagesDir = resolve(process.cwd(), inputPattern);
   const publicDir = resolve(process.cwd(), DIRS.PUBLIC);
+  const barrelsDir = resolve(process.cwd(), DIRS.BARRELS);
 
   console.log(`👀 Watching for changes in ${inputPattern}/ and public/...`);
 
-  // Debounce rebuilds
-  let rebuildTimeout;
-  const debouncedRebuild = async (file) => {
-    clearTimeout(rebuildTimeout);
-    rebuildTimeout = setTimeout(async () => {
-      try {
-        console.log(`\n📝 File changed: ${relative(process.cwd(), file)}`);
-        console.log("🔄 Rebuilding...\n");
+  const rebuildPage = debounce(async (file) => {
+    console.log(`\n📝 File changed: ${relative(process.cwd(), file)}`);
+    console.log("🔄 Rebuilding...\n");
+    await buildFile(file, buildOpts);
+    await generateUnoCSS(buildOpts);
+    await afterRebuild({ onRebuild, wss });
+  });
 
-        await buildFile(file, { outputDir, unocssConfig, silent: false });
-        await generateUnoCSS({ outputDir, unocssConfig, silent: false });
+  const rebuildAll = debounce(async (reason) => {
+    console.log(`\n📝 ${reason}`);
+    console.log("🔄 Rebuilding...\n");
+    await buildFiles(inputPattern, buildOpts);
+    await generateUnoCSS(buildOpts);
+    await afterRebuild({ onRebuild, wss });
+  });
 
-        if (onRebuild) {
-          await onRebuild();
-        }
-
-        if (wss) {
-          broadcastReload(wss);
-        }
-      } catch (error) {
-        console.error("❌ Build error:", error.message);
-      }
-    }, TIMING.DEBOUNCE_MS);
-  };
-
-  // Watch pages directory
-  const watcher = watch(pagesDir, { recursive: true }, async (eventType, filename) => {
+  const watcher = watch(pagesDir, { recursive: true }, (_eventType, filename) => {
     if (filename && isJSXFile(filename)) {
-      const filePath = join(pagesDir, filename);
-      await debouncedRebuild(filePath);
+      rebuildPage(join(pagesDir, filename));
     }
   });
 
-  // Watch public directory if it exists
   let publicWatcher;
   try {
-    publicWatcher = watch(publicDir, { recursive: true }, async (eventType, filename) => {
-      if (filename) {
-        console.log(`\n📝 Public file changed: ${filename}`);
-        console.log("🔄 Rebuilding...\n");
-
-        // Rebuild all files to update references
-        await buildFiles(inputPattern, { outputDir, unocssConfig, silent: false });
-        await generateUnoCSS({ outputDir, unocssConfig, silent: false });
-
-        if (onRebuild) {
-          await onRebuild();
-        }
-
-        if (wss) {
-          broadcastReload(wss);
-        }
-      }
+    publicWatcher = watch(publicDir, { recursive: true }, (_eventType, filename) => {
+      if (filename) rebuildAll(`Public file changed: ${filename}`);
     });
-  } catch (error) {
+  } catch {
     // Public directory might not exist
   }
 
-  // Watch barrels directory if it exists
-  const barrelsDir = resolve(process.cwd(), DIRS.BARRELS);
+  const regenerateBarrel = debounce(async (barrelDir, filename) => {
+    console.log(`\n📝 Barrel file changed: ${filename}`);
+    console.log("🔄 Regenerating barrel...\n");
+    await generateBarrel(barrelDir);
+    await buildFiles(inputPattern, buildOpts);
+    await generateUnoCSS(buildOpts);
+    await afterRebuild({ onRebuild, wss });
+  });
+
   let barrelsWatcher;
   try {
-    barrelsWatcher = watch(barrelsDir, { recursive: true }, async (eventType, filename) => {
+    barrelsWatcher = watch(barrelsDir, { recursive: true }, (_eventType, filename) => {
       if (filename && isJSXFile(filename)) {
-        // Extract barrel name from path (e.g., "blog/post1.tsx" -> "blog")
         const barrelName = filename.split("/")[0];
-        const barrelDir = join(barrelsDir, barrelName);
-
-        console.log(`\n📝 Barrel file changed: ${filename}`);
-        console.log("🔄 Regenerating barrel...\n");
-
-        try {
-          await generateBarrel(barrelDir);
-
-          // Rebuild pages that might depend on this barrel
-          await buildFiles(inputPattern, { outputDir, unocssConfig, silent: false });
-          await generateUnoCSS({ outputDir, unocssConfig, silent: false });
-
-          if (onRebuild) {
-            await onRebuild();
-          }
-
-          if (wss) {
-            broadcastReload(wss);
-          }
-        } catch (error) {
-          console.error("❌ Barrel generation error:", error.message);
-        }
+        regenerateBarrel(join(barrelsDir, barrelName), filename);
       }
     });
-  } catch (error) {
+  } catch {
     // Barrels directory might not exist
   }
 
@@ -172,37 +149,18 @@ export async function watchFiles(inputPattern, options = {}) {
  */
 export async function watchFile(inputFile, options = {}) {
   const { outputDir = DIRS.OUTPUT, unocssConfig, onRebuild, wss } = options;
-
+  const buildOpts = { outputDir, unocssConfig, silent: false };
   const resolvedInput = resolve(process.cwd(), inputFile);
 
   console.log(`👀 Watching for changes in ${inputFile}...`);
 
-  // Debounce rebuilds
-  let rebuildTimeout;
-  const debouncedRebuild = async () => {
-    clearTimeout(rebuildTimeout);
-    rebuildTimeout = setTimeout(async () => {
-      try {
-        console.log(`\n📝 File changed: ${inputFile}`);
-        console.log("🔄 Rebuilding...\n");
+  const rebuild = debounce(async () => {
+    console.log(`\n📝 File changed: ${inputFile}`);
+    console.log("🔄 Rebuilding...\n");
+    await buildFile(resolvedInput, buildOpts);
+    await generateUnoCSS(buildOpts);
+    await afterRebuild({ onRebuild, wss });
+  });
 
-        await buildFile(resolvedInput, { outputDir, unocssConfig, silent: false });
-        await generateUnoCSS({ outputDir, unocssConfig, silent: false });
-
-        if (onRebuild) {
-          await onRebuild();
-        }
-
-        if (wss) {
-          broadcastReload(wss);
-        }
-      } catch (error) {
-        console.error("❌ Build error:", error.message);
-      }
-    }, TIMING.DEBOUNCE_MS);
-  };
-
-  const watcher = watch(resolvedInput, debouncedRebuild);
-
-  return { watcher };
+  return { watcher: watch(resolvedInput, rebuild) };
 }

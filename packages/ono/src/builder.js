@@ -88,17 +88,15 @@ export async function buildFiles(inputPattern, options = {}) {
     console.log(`Found ${files.length} page(s) in ${inputPattern}/\n`);
   }
 
-  const results = [];
-
-  for (const file of files) {
-    if (!silent) {
+  if (!silent) {
+    for (const file of files) {
       console.log(`Building ${relative(process.cwd(), file)}...`);
     }
-    const result = await buildFile(file, { outputDir, unocssConfig, silent: true });
-    results.push(result);
   }
 
-  return results;
+  return Promise.all(
+    files.map((file) => buildFile(file, { outputDir, unocssConfig, silent: true })),
+  );
 }
 
 /**

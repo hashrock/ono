@@ -76,6 +76,14 @@ export const MIME_TYPES = {
 };
 
 /**
+ * Node.js error codes
+ */
+export const ERROR_CODES = {
+  PORT_IN_USE: "EADDRINUSE",
+  FILE_NOT_FOUND: "ENOENT",
+};
+
+/**
  * HTTP status codes
  */
 export const HTTP_STATUS = {

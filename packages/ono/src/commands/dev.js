@@ -1,9 +1,8 @@
 /**
  * Dev command for Ono CLI
  */
-import { resolve } from "node:path";
+import { resolve, relative } from "node:path";
 import { stat } from "node:fs/promises";
-import { relative } from "node:path";
 import { loadUnoConfig } from "../unocss.js";
 import { createDevServer } from "../server.js";
 import { buildFile, buildFiles, generateUnoCSS } from "../builder.js";
@@ -42,78 +41,38 @@ export async function runDevCommand(args) {
   // Generate barrel files if barrels directory exists
   await initializeBarrels();
 
-  // Initial build
   const inputPath = resolve(process.cwd(), input);
   const inputStat = await stat(inputPath);
+  const isDirectory = inputStat.isDirectory();
 
-  if (inputStat.isDirectory()) {
-    await buildFiles(input, { outputDir, unocssConfig });
-  } else {
-    await buildFile(input, { outputDir, unocssConfig });
-  }
+  const initialBuild = isDirectory
+    ? await buildFiles(input, { outputDir, unocssConfig })
+    : [await buildFile(input, { outputDir, unocssConfig })];
 
   await copyPublicFiles(outputDir);
   await generateUnoCSS({ outputDir, unocssConfig });
 
-  // Create WebSocket server for live reload
-  const { wss, port: wsPort } = createWebSocketServer();
+  const { wss } = createWebSocketServer();
 
-  // Start dev server
-  const mode = inputStat.isDirectory() ? "pages" : "single";
-  const indexFile = inputStat.isFile()
-    ? relative(
-        outputDir,
-        (await buildFile(input, { outputDir, unocssConfig, silent: true }))
-          .outputPath
-      )
-    : "index.html";
+  const mode = isDirectory ? "pages" : "single";
+  const indexFile = isDirectory
+    ? "index.html"
+    : relative(outputDir, initialBuild[0].outputPath);
 
-  let serverPort = port;
-  try {
-    const { server, app, port: actualPort } = await createDevServer({
-      outputDir,
-      port,
-      mode,
-      indexFile,
-    });
-    serverPort = actualPort;
-  } catch (error) {
-    if (error.code === "EADDRINUSE") {
-      serverPort = port + 1;
-      console.log(
-        `ℹ️  Port ${port} is busy, using port ${serverPort} instead`
-      );
-      await createDevServer({
-        outputDir,
-        port: serverPort,
-        mode,
-        indexFile,
-      });
-    } else {
-      throw error;
-    }
-  }
+  const { port: serverPort } = await createDevServer({
+    outputDir,
+    port,
+    mode,
+    indexFile,
+  });
 
-  // Watch for changes
-  const rebuildCallback = async () => {
-    await copyPublicFiles(outputDir);
+  const watchOpts = {
+    outputDir,
+    unocssConfig,
+    wss,
+    onRebuild: () => copyPublicFiles(outputDir),
   };
-
-  if (inputStat.isDirectory()) {
-    await watchFiles(input, {
-      outputDir,
-      unocssConfig,
-      wss,
-      onRebuild: rebuildCallback,
-    });
-  } else {
-    await watchFile(input, {
-      outputDir,
-      unocssConfig,
-      wss,
-      onRebuild: rebuildCallback,
-    });
-  }
+  await (isDirectory ? watchFiles(input, watchOpts) : watchFile(input, watchOpts));
 
   console.log(`\n🚀 Server running at http://localhost:${serverPort}`);
   console.log(`📝 Serving: ${input}/ → ${outputDir}/`);
