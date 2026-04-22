@@ -6,7 +6,7 @@ import { toNodeHandler } from "h3/node";
 import { createServer } from "node:http";
 import { resolve, join, extname } from "node:path";
 import { readFile } from "node:fs/promises";
-import { DIRS, PORTS, MIME_TYPES, HTTP_STATUS } from "./constants.js";
+import { DIRS, PORTS, MIME_TYPES, HTTP_STATUS, ERROR_CODES } from "./constants.js";
 
 /**
  * Create a development server
@@ -24,63 +24,53 @@ export async function createDevServer(options) {
 
   const app = createApp();
 
-  // Serve static files from output directory
   app.use(
     "/**",
     eventHandler(async (event) => {
+      const url = event.path || "/";
+      const isFavicon = url === "/favicon.ico";
+      const rootFile = mode === "single" ? indexFile : "index.html";
+      const filePath = join(outDir, url === "/" || url === "" ? rootFile : url);
+
       try {
-        const url = event.path || "/";
-        let filePath;
-
-        if (mode === "single") {
-          // Single file mode: serve specific file for root
-          if (url === "/" || url === "") {
-            filePath = join(outDir, indexFile);
-          } else {
-            filePath = join(outDir, url);
-          }
-        } else {
-          // Pages mode: default routing
-          if (url === "/" || url === "") {
-            filePath = join(outDir, "index.html");
-          } else {
-            filePath = join(outDir, url);
-          }
-        }
-
         const content = await readFile(filePath);
-        const ext = extname(filePath);
-
-        setResponseHeader(event, "Content-Type", MIME_TYPES[ext] || "application/octet-stream");
+        setResponseHeader(event, "Content-Type", MIME_TYPES[extname(filePath)] || "application/octet-stream");
         return content;
       } catch (error) {
-        // Don't log error for missing favicon.ico (browsers request it automatically)
-        const isFavicon = url === "/favicon.ico";
-        if (!isFavicon) {
-          console.error("Server error:", error);
-        }
-        if (error.code === "ENOENT") {
+        if (!isFavicon) console.error("Server error:", error);
+        if (error.code === ERROR_CODES.FILE_NOT_FOUND) {
           throw createError({
             statusCode: HTTP_STATUS.NOT_FOUND,
             statusMessage: "Not Found",
             message: isFavicon ? "Favicon not found" : `File not found: ${error.path}`,
           });
-        } else {
-          throw createError({
-            statusCode: HTTP_STATUS.SERVER_ERROR,
-            statusMessage: "Internal Server Error",
-            message: error.message,
-          });
         }
+        throw createError({
+          statusCode: HTTP_STATUS.SERVER_ERROR,
+          statusMessage: "Internal Server Error",
+          message: error.message,
+        });
       }
     })
   );
 
   const server = createServer(toNodeHandler(app));
 
-  return new Promise((resolve) => {
+  return new Promise((resolvePromise, rejectPromise) => {
+    const onError = (err) => {
+      if (err.code === ERROR_CODES.PORT_IN_USE) {
+        const nextPort = port + 1;
+        console.log(`ℹ️  Port ${port} is busy, using port ${nextPort} instead`);
+        server.removeListener("error", onError);
+        createDevServer({ ...options, port: nextPort }).then(resolvePromise, rejectPromise);
+        return;
+      }
+      rejectPromise(err);
+    };
+    server.once("error", onError);
     server.listen(port, () => {
-      resolve({ server, app, port });
+      server.removeListener("error", onError);
+      resolvePromise({ server, app, port });
     });
   });
 }
