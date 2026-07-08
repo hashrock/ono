@@ -8,8 +8,6 @@
 export const PORTS = {
   /** Default HTTP server port */
   SERVER: 3000,
-  /** Default WebSocket port for live reload */
-  WEBSOCKET: 35729,
 };
 
 /**
@@ -73,21 +71,4 @@ export const MIME_TYPES = {
   ".woff2": "font/woff2",
   ".ttf": "font/ttf",
   ".eot": "application/vnd.ms-fontobject",
-};
-
-/**
- * Node.js error codes
- */
-export const ERROR_CODES = {
-  PORT_IN_USE: "EADDRINUSE",
-  FILE_NOT_FOUND: "ENOENT",
-};
-
-/**
- * HTTP status codes
- */
-export const HTTP_STATUS = {
-  OK: 200,
-  NOT_FOUND: 404,
-  SERVER_ERROR: 500,
 };

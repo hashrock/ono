@@ -1,32 +1,26 @@
 /**
- * UnoCSS Integration for Mini JSX
+ * UnoCSS Integration for Ono
  */
 
-import { createGenerator, presetUno } from "unocss";
+import { createGenerator } from "@unocss/core";
+import { presetUno } from "@unocss/preset-uno";
 import fs from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
 
 /**
  * Get the Tailwind reset CSS
  * @returns {Promise<string>} Reset CSS content
  */
 async function getResetCSS() {
-  const resetPath = path.resolve(__dirname, "../node_modules/@unocss/reset/tailwind.css");
   try {
-    return await fs.readFile(resetPath, "utf-8");
+    return await fs.readFile(require.resolve("@unocss/reset/tailwind.css"), "utf-8");
   } catch {
-    // Fallback: try to find it relative to the package
-    try {
-      const fallbackPath = new URL("../node_modules/@unocss/reset/tailwind.css", import.meta.url);
-      return await fs.readFile(fileURLToPath(fallbackPath), "utf-8");
-    } catch {
-      return "";
-    }
+    return "";
   }
 }
 

@@ -5,7 +5,7 @@ import { resolve, relative } from "node:path";
 import { stat } from "node:fs/promises";
 import { createDevServer } from "../server.js";
 import { buildFile, buildFiles, generateUnoCSS } from "../builder.js";
-import { watchFile, watchFiles, createWebSocketServer } from "../watcher.js";
+import { watchFile, watchFiles } from "../watcher.js";
 import { copyPublicFiles, initializeBarrels, parseCommandArgs } from "./build.js";
 
 /**
@@ -30,14 +30,12 @@ export async function runDevCommand(args) {
   await copyPublicFiles(outputDir);
   await generateUnoCSS({ outputDir });
 
-  const { wss } = createWebSocketServer();
-
   const mode = isDirectory ? "pages" : "single";
   const indexFile = isDirectory
     ? "index.html"
     : relative(outputDir, initialBuild[0].outputPath);
 
-  const { port: serverPort } = await createDevServer({
+  const { port: serverPort, reload } = await createDevServer({
     outputDir,
     port,
     mode,
@@ -46,7 +44,7 @@ export async function runDevCommand(args) {
 
   const watchOpts = {
     outputDir,
-    wss,
+    reload,
     onRebuild: () => copyPublicFiles(outputDir),
   };
   await (isDirectory ? watchFiles(input, watchOpts) : watchFile(input, watchOpts));
