@@ -97,7 +97,8 @@ export default function Page() {
 
 ```js
 import { renderToString } from "@hashrock/ono/renderer";
-import { bundle } from "@hashrock/ono/bundler";
+import { transformJSX } from "@hashrock/ono/transformer";
+import { bundle } from "@hashrock/ono/bundler"; // ブラウザ互換ミニバンドラ
 ```
 
 ## 重要なポイント

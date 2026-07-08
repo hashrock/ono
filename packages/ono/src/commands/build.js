@@ -1,29 +1,36 @@
 /**
  * Build command for Ono CLI
  */
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
 import { copyFile, mkdir, readdir, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { loadUnoConfig } from "../unocss.js";
+import { parseArgs } from "node:util";
 import { buildFile, buildFiles, generateUnoCSS } from "../builder.js";
 import { generateBarrels } from "../barrels.js";
-import { DIRS } from "../constants.js";
+import { DIRS, PORTS } from "../constants.js";
 
 /**
- * Parse build command arguments
+ * Parse arguments shared by the build and dev commands
  * @param {string[]} args - Command line arguments
- * @returns {{ input: string, outputDir: string, showHelp: boolean }}
+ * @returns {{ input: string, outputDir: string, port: number, showHelp: boolean }}
  */
-export function parseBuildArgs(args) {
-  const showHelp = args.includes("--help") || args.includes("-h");
-  const nonOptionArgs = args.filter((arg) => !arg.startsWith("--"));
-  const input = nonOptionArgs[0] || DIRS.PAGES;
-  const outputDir = args.includes("--output")
-    ? args[args.indexOf("--output") + 1]
-    : DIRS.OUTPUT;
+export function parseCommandArgs(args) {
+  const { values, positionals } = parseArgs({
+    args,
+    options: {
+      output: { type: "string", default: DIRS.OUTPUT },
+      port: { type: "string", default: String(PORTS.SERVER) },
+      help: { type: "boolean", short: "h", default: false },
+    },
+    allowPositionals: true,
+  });
 
-  return { input, outputDir, showHelp };
+  return {
+    input: positionals[0] || DIRS.PAGES,
+    outputDir: values.output,
+    port: Number.parseInt(values.port, 10),
+    showHelp: values.help,
+  };
 }
 
 /**
@@ -100,14 +107,12 @@ export async function initializeBarrels() {
  * @returns {Promise<void>}
  */
 export async function runBuildCommand(args) {
-  const { input, outputDir, showHelp } = parseBuildArgs(args);
+  const { input, outputDir, showHelp } = parseCommandArgs(args);
 
   if (showHelp) {
     showBuildHelp();
     process.exit(0);
   }
-
-  const unocssConfig = await loadUnoConfig();
 
   // Generate barrel files if barrels directory exists
   await initializeBarrels();
@@ -117,16 +122,16 @@ export async function runBuildCommand(args) {
   const inputStat = await stat(inputPath);
 
   if (inputStat.isDirectory()) {
-    await buildFiles(input, { outputDir, unocssConfig });
+    await buildFiles(input, { outputDir });
   } else {
-    await buildFile(input, { outputDir, unocssConfig });
+    await buildFile(input, { outputDir });
   }
 
   // Copy public files
   await copyPublicFiles(outputDir);
 
   // Generate UnoCSS
-  await generateUnoCSS({ outputDir, unocssConfig });
+  await generateUnoCSS({ outputDir });
 
   console.log("\n✨ Build complete!");
 }

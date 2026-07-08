@@ -8,8 +8,6 @@
 export const PORTS = {
   /** Default HTTP server port */
   SERVER: 3000,
-  /** Default WebSocket port for live reload */
-  WEBSOCKET: 35729,
 };
 
 /**
@@ -74,41 +72,3 @@ export const MIME_TYPES = {
   ".ttf": "font/ttf",
   ".eot": "application/vnd.ms-fontobject",
 };
-
-/**
- * Node.js error codes
- */
-export const ERROR_CODES = {
-  PORT_IN_USE: "EADDRINUSE",
-  FILE_NOT_FOUND: "ENOENT",
-};
-
-/**
- * HTTP status codes
- */
-export const HTTP_STATUS = {
-  OK: 200,
-  NOT_FOUND: 404,
-  SERVER_ERROR: 500,
-};
-
-/**
- * Inline JSX runtime for bundled output
- * This is injected into bundled files to provide JSX support without external dependencies
- */
-export const INLINE_JSX_RUNTIME = `function flattenChildren(children) {
-  const result = [];
-  for (const child of children) {
-    if (child === null || child === undefined || typeof child === 'boolean') continue;
-    if (Array.isArray(child)) {
-      result.push(...flattenChildren(child));
-    } else {
-      result.push(child);
-    }
-  }
-  return result;
-}
-function h(tag, props, ...children) {
-  return { tag, props: props || {}, children: flattenChildren(children) };
-}
-`;

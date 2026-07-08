@@ -3,6 +3,7 @@ function Nav() {
     { href: "/", label: "Home" },
     { href: "/about.html", label: "About" },
     { href: "/features.html", label: "Features" },
+    { href: "/blog.html", label: "Blog" },
   ];
 
   return (

@@ -212,3 +212,93 @@ test("renderToString - Fragment with mixed content", () => {
   const result = renderToString(vnode);
   assert.strictEqual(result, "Text before<strong>bold</strong>Text after");
 });
+
+// --- Output snapshots (update with: npm run test:update) ---
+
+const raw = { serializers: [(value) => value] };
+
+test("renderToString snapshot - nested elements", (t) => {
+  const vnode = createElement("div", { className: "container" },
+    createElement("h1", null, "Title"),
+    createElement("p", null, "This is a paragraph with ",
+      createElement("strong", null, "bold text"),
+      " and regular text."
+    ),
+    createElement("ul", null,
+      createElement("li", null, "Item 1"),
+      createElement("li", null, "Item 2"),
+      createElement("li", null, "Item 3")
+    )
+  );
+  t.assert.snapshot(renderToString(vnode), raw);
+});
+
+test("renderToString snapshot - component function", (t) => {
+  function BlogPost({ title, author, children }) {
+    return createElement("article", { className: "blog-post" },
+      createElement("header", null,
+        createElement("h1", null, title),
+        createElement("p", { className: "author" }, "By ", author)
+      ),
+      createElement("div", { className: "content" }, children)
+    );
+  }
+
+  const vnode = BlogPost({
+    title: "My First Post",
+    author: "John Doe",
+    children: [
+      createElement("p", null, "This is the first paragraph."),
+      createElement("p", null, "This is the second paragraph.")
+    ]
+  });
+
+  t.assert.snapshot(renderToString(vnode), raw);
+});
+
+test("renderToString snapshot - style object", (t) => {
+  const vnode = createElement("div", {
+    style: {
+      backgroundColor: "red",
+      fontSize: "16px",
+      margin: "10px 20px"
+    }
+  }, "Styled content");
+  t.assert.snapshot(renderToString(vnode), raw);
+});
+
+test("renderToString snapshot - complex form", (t) => {
+  const vnode = createElement("form", { className: "contact-form", method: "post" },
+    createElement("div", { className: "form-group" },
+      createElement("label", { htmlFor: "name" }, "Name:"),
+      createElement("input", {
+        type: "text",
+        id: "name",
+        name: "name",
+        required: true,
+        placeholder: "Enter your name"
+      })
+    ),
+    createElement("div", { className: "form-group" },
+      createElement("label", { htmlFor: "message" }, "Message:"),
+      createElement("textarea", {
+        id: "message",
+        name: "message",
+        rows: 4,
+        placeholder: "Enter your message"
+      })
+    ),
+    createElement("button", { type: "submit", className: "btn btn-primary" }, "Send Message")
+  );
+  t.assert.snapshot(renderToString(vnode), raw);
+});
+
+test("renderToString snapshot - HTML entities escaping", (t) => {
+  const vnode = createElement("div", {
+    title: "This has \"quotes\" & <tags>",
+    "data-value": "<script>alert('xss')</script>"
+  },
+    "Content with <em>HTML</em> & \"special\" characters"
+  );
+  t.assert.snapshot(renderToString(vnode), raw);
+});

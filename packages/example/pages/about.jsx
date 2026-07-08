@@ -6,7 +6,7 @@ function About() {
     <Layout title="About - Ono Example">
       <h1 class="text-3xl font-bold mb-6">About This Example</h1>
 
-      <div class="prose max-w-none">
+      <div class="max-w-none">
         <p class="text-lg text-gray-600 mb-8">
           This example site demonstrates how to build a modern static site using Ono with UnoCSS,
           reusable layouts, and component-based architecture.

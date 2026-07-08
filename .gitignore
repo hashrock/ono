@@ -83,8 +83,11 @@ out
 dist
 .output
 
-# Mini JSX temporary files
-.mini-jsx-tmp.js
+# Ono per-build temp directory
+.ono/
+
+# Generated barrel files in the example
+packages/example/barrels/*.ts
 
 # Gatsby files
 .cache/

@@ -1,31 +1,26 @@
 /**
- * UnoCSS Integration for Mini JSX
+ * UnoCSS Integration for Ono
  */
 
-import { createGenerator, presetUno } from "unocss";
+import { createGenerator } from "@unocss/core";
+import { presetUno } from "@unocss/preset-uno";
 import fs from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
 
 /**
  * Get the Tailwind reset CSS
  * @returns {Promise<string>} Reset CSS content
  */
 async function getResetCSS() {
-  const resetPath = path.resolve(__dirname, "../node_modules/@unocss/reset/tailwind.css");
   try {
-    return await fs.readFile(resetPath, "utf-8");
+    return await fs.readFile(require.resolve("@unocss/reset/tailwind.css"), "utf-8");
   } catch {
-    // Fallback: try to find it relative to the package
-    try {
-      const fallbackPath = new URL("../node_modules/@unocss/reset/tailwind.css", import.meta.url);
-      return await fs.readFile(fileURLToPath(fallbackPath), "utf-8");
-    } catch {
-      return "";
-    }
+    return "";
   }
 }
 
@@ -42,19 +37,20 @@ export async function createUnoGenerator(userConfig = {}) {
 }
 
 /**
- * Load UnoCSS config from file
- * @param {string} configPath - Path to config file
+ * Load UnoCSS config from file (defaults to uno.config.js in the project root).
+ * Returns an empty config when the file doesn't exist; errors inside an
+ * existing config file are NOT swallowed.
+ * @param {string} [configPath] - Path to config file
  * @returns {Promise<object>} Configuration object
  */
 export async function loadUnoConfig(configPath) {
-  try {
-    const configUrl = `file://${path.resolve(configPath)}?t=${Date.now()}`;
-    const module = await import(configUrl);
-    return module.default || module;
-  } catch (error) {
-    // Config file doesn't exist, return empty config
+  const resolved = path.resolve(process.cwd(), configPath || "uno.config.js");
+  if (!existsSync(resolved)) {
     return {};
   }
+  const configUrl = `${pathToFileURL(resolved).href}?t=${Date.now()}`;
+  const module = await import(configUrl);
+  return module.default || module;
 }
 
 /**

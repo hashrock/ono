@@ -1,0 +1,158 @@
+exports[`cli - build command help 1`] = `
+Exit Code: 0
+STDOUT:
+
+Usage: ono build [input] [options]
+
+Build JSX files to static HTML
+
+Arguments:
+  input                  File or directory to build (default: pages)
+
+Options:
+  --output <dir>         Output directory (default: dist)
+  --help                 Show this help message
+
+Examples:
+  ono build              Build all pages in pages/ directory
+  ono build pages/index.jsx   Build a single file
+  ono build --output build   Build to build/ directory
+
+
+STDERR:
+
+`;
+
+exports[`cli - build non-existent directory 1`] = `
+Exit Code: 1
+STDOUT:
+
+STDERR:
+Error: ENOENT: no such file or directory, stat '/PATH/test-tmp/non-existent-dir'
+
+`;
+
+exports[`cli - build non-existent file 1`] = `
+Exit Code: 1
+STDOUT:
+
+STDERR:
+Error: ENOENT: no such file or directory, stat '/PATH/test-tmp/non-existent.jsx'
+
+`;
+
+exports[`cli - help message 1`] = `
+Exit Code: 0
+STDOUT:
+
+Ono - Minimalist SSG Framework
+
+Usage:
+  ono <command> [options]
+
+Commands:
+  build [input]          Build JSX files to static HTML
+                         input: file or directory (default: pages)
+
+  dev [input]            Build, watch, and serve with live reload
+                         input: file or directory (default: pages)
+
+Options:
+  --output <dir>         Output directory (default: dist)
+  --port <number>        Server port (default: 3000)
+  --help                 Show this help message
+
+Examples:
+  ono build              Build all pages in pages/ directory
+  ono build pages/index.jsx   Build a single file
+  ono dev                Start dev server with live reload
+  ono dev --port 8080    Start dev server on port 8080
+
+
+STDERR:
+
+`;
+
+exports[`cli - help message short flag 1`] = `
+Exit Code: 0
+STDOUT:
+
+Ono - Minimalist SSG Framework
+
+Usage:
+  ono <command> [options]
+
+Commands:
+  build [input]          Build JSX files to static HTML
+                         input: file or directory (default: pages)
+
+  dev [input]            Build, watch, and serve with live reload
+                         input: file or directory (default: pages)
+
+Options:
+  --output <dir>         Output directory (default: dist)
+  --port <number>        Server port (default: 3000)
+  --help                 Show this help message
+
+Examples:
+  ono build              Build all pages in pages/ directory
+  ono build pages/index.jsx   Build a single file
+  ono dev                Start dev server with live reload
+  ono dev --port 8080    Start dev server on port 8080
+
+
+STDERR:
+
+`;
+
+exports[`cli - no command provided 1`] = `
+Exit Code: 0
+STDOUT:
+
+Ono - Minimalist SSG Framework
+
+Usage:
+  ono <command> [options]
+
+Commands:
+  build [input]          Build JSX files to static HTML
+                         input: file or directory (default: pages)
+
+  dev [input]            Build, watch, and serve with live reload
+                         input: file or directory (default: pages)
+
+Options:
+  --output <dir>         Output directory (default: dist)
+  --port <number>        Server port (default: 3000)
+  --help                 Show this help message
+
+Examples:
+  ono build              Build all pages in pages/ directory
+  ono build pages/index.jsx   Build a single file
+  ono dev                Start dev server with live reload
+  ono dev --port 8080    Start dev server on port 8080
+
+
+STDERR:
+
+`;
+
+exports[`cli - unknown command 1`] = `
+Exit Code: 1
+STDOUT:
+
+STDERR:
+Unknown command: unknown-command
+Run "ono --help" for usage information
+
+`;
+
+exports[`cli - version flag (not supported) 1`] = `
+Exit Code: 1
+STDOUT:
+
+STDERR:
+Unknown command: --version
+Run "ono --help" for usage information
+
+`;

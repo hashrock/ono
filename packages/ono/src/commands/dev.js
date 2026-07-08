@@ -3,30 +3,10 @@
  */
 import { resolve, relative } from "node:path";
 import { stat } from "node:fs/promises";
-import { loadUnoConfig } from "../unocss.js";
 import { createDevServer } from "../server.js";
 import { buildFile, buildFiles, generateUnoCSS } from "../builder.js";
-import { watchFile, watchFiles, createWebSocketServer } from "../watcher.js";
-import { copyPublicFiles, initializeBarrels } from "./build.js";
-import { DIRS, PORTS } from "../constants.js";
-
-/**
- * Parse dev command arguments
- * @param {string[]} args - Command line arguments
- * @returns {{ input: string, port: number, outputDir: string }}
- */
-export function parseDevArgs(args) {
-  const nonOptionArgs = args.filter((arg) => !arg.startsWith("--"));
-  const input = nonOptionArgs[0] || DIRS.PAGES;
-  const port = args.includes("--port")
-    ? parseInt(args[args.indexOf("--port") + 1])
-    : PORTS.SERVER;
-  const outputDir = args.includes("--output")
-    ? args[args.indexOf("--output") + 1]
-    : DIRS.OUTPUT;
-
-  return { input, port, outputDir };
-}
+import { watchFile, watchFiles } from "../watcher.js";
+import { copyPublicFiles, initializeBarrels, parseCommandArgs } from "./build.js";
 
 /**
  * Run the dev command
@@ -34,9 +14,7 @@ export function parseDevArgs(args) {
  * @returns {Promise<void>}
  */
 export async function runDevCommand(args) {
-  const { input, port, outputDir } = parseDevArgs(args);
-
-  const unocssConfig = await loadUnoConfig();
+  const { input, port, outputDir } = parseCommandArgs(args);
 
   // Generate barrel files if barrels directory exists
   await initializeBarrels();
@@ -46,20 +24,18 @@ export async function runDevCommand(args) {
   const isDirectory = inputStat.isDirectory();
 
   const initialBuild = isDirectory
-    ? await buildFiles(input, { outputDir, unocssConfig })
-    : [await buildFile(input, { outputDir, unocssConfig })];
+    ? await buildFiles(input, { outputDir })
+    : [await buildFile(input, { outputDir })];
 
   await copyPublicFiles(outputDir);
-  await generateUnoCSS({ outputDir, unocssConfig });
-
-  const { wss } = createWebSocketServer();
+  await generateUnoCSS({ outputDir });
 
   const mode = isDirectory ? "pages" : "single";
   const indexFile = isDirectory
     ? "index.html"
     : relative(outputDir, initialBuild[0].outputPath);
 
-  const { port: serverPort } = await createDevServer({
+  const { port: serverPort, reload } = await createDevServer({
     outputDir,
     port,
     mode,
@@ -68,8 +44,7 @@ export async function runDevCommand(args) {
 
   const watchOpts = {
     outputDir,
-    unocssConfig,
-    wss,
+    reload,
     onRebuild: () => copyPublicFiles(outputDir),
   };
   await (isDirectory ? watchFiles(input, watchOpts) : watchFile(input, watchOpts));

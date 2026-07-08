@@ -9,6 +9,7 @@
     "./jsx-runtime": "./src/jsx-runtime.js",
     "./renderer": "./src/renderer.js",
     "./transformer": "./src/transformer.js",
+    "./parser": "./src/parser.js",
     "./bundler": "./src/bundler.js",
     "./barrels": "./src/barrels.js",
     "./browser/compiler": "./src/browser/compiler.js",
@@ -23,11 +24,9 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node --test test/**/*.test.js",
-    "test:watch": "node --test --watch test/**/*.test.js",
-    "test:snapshot": "node --test test/**/*.snapshot.test.js",
-    "test:snapshot:update": "UPDATE_SNAPSHOTS=true node --test test/**/*.snapshot.test.js",
-    "test:all": "npm run test && npm run test:snapshot"
+    "test": "node --test test/*.test.js",
+    "test:watch": "node --test --watch test/*.test.js",
+    "test:update": "node --test --test-update-snapshots test/*.test.js"
   },
   "keywords": [
     "jsx",
@@ -49,13 +48,12 @@
   },
   "homepage": "https://github.com/hashrock/ono#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.3.0"
   },
   "dependencies": {
+    "@unocss/core": "^66.5.4",
     "@unocss/preset-uno": "^66.5.4",
-    "h3": "^2.0.1-rc.5",
-    "typescript": "^5.9.3",
-    "unocss": "^66.5.4",
-    "ws": "^8.18.3"
+    "@unocss/reset": "^66.5.4",
+    "typescript": "^5.9.3"
   }
 }

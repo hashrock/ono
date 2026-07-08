@@ -1,36 +1,29 @@
 /**
- * Node.js utilities for Ono SSG
- * This file contains utilities that require Node.js runtime.
- * For browser-compatible utilities, use utils.browser.js
+ * Shared utilities for Ono SSG
  */
-import { unlink } from "node:fs/promises";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 
-// Re-export browser-compatible utilities for backward compatibility
-export {
-  flattenChildren,
-  isJSXFile,
-  isHTMLFile,
-  toCamelCase,
-  debounce,
-} from "./utils.browser.js";
-
 /**
- * Clean up a temporary file, silently ignoring errors
- * @param {string} tempFile - Path to the temporary file to delete
- * @returns {Promise<void>}
+ * Check if a filename has a JSX extension (.jsx or .tsx)
+ * @param {string} filename - The filename to check
+ * @returns {boolean} True if the file has a JSX extension
  */
-export async function cleanupTempFile(tempFile) {
-  try {
-    await unlink(tempFile);
-  } catch {
-    // Ignore cleanup errors
-  }
+export function isJSXFile(filename) {
+  return filename.endsWith(".jsx") || filename.endsWith(".tsx");
 }
 
 /**
- * Get all files with specified extensions recursively from a directory
+ * Check if a filename has an HTML extension
+ * @param {string} filename - The filename to check
+ * @returns {boolean} True if the file has an HTML extension
+ */
+export function isHTMLFile(filename) {
+  return filename.endsWith(".html");
+}
+
+/**
+ * Get all files matching a predicate recursively from a directory
  * @param {string} dir - Directory to search
  * @param {(filename: string) => boolean} predicate - Function to test filenames
  * @returns {Promise<string[]>} Array of file paths

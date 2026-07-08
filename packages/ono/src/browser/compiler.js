@@ -1,188 +1,73 @@
 /**
- * Browser compiler utilities shared with the REPL worker.
+ * Browser compiler - shared with the REPL worker.
+ *
+ * Uses the same mini bundler as the Node build (bundler.js/parser.js).
+ * Package imports are rejected — the browser has no module resolution —
+ * and the bundle is evaluated with new Function, with the JSX runtime
+ * passed in as parameters.
  */
 
 import { transformJSX } from '../transformer.js';
 import { renderToString } from '../renderer.js';
-import { h } from '../jsx-runtime.js';
+import { h, Fragment } from '../jsx-runtime.js';
+import { bundle } from '../bundler.js';
 import { getUnoGenerator } from './unocss.js';
 
-function resolveImport(from, to) {
-  if (to.startsWith('./') || to.startsWith('../')) {
-    const fromParts = from.split('/').slice(0, -1);
-    const targetParts = to.split('/');
-    const resolved = [...fromParts];
+/** Join a relative specifier against the importing file's virtual path */
+function resolveImport(fromId, specifier) {
+  const fromParts = fromId.split('/').slice(0, -1);
+  const targetParts = specifier.split('/');
+  const resolved = [...fromParts];
 
-    for (const part of targetParts) {
-      if (!part || part === '.') continue;
-      if (part === '..') {
-        resolved.pop();
-      } else {
-        resolved.push(part);
-      }
+  for (const part of targetParts) {
+    if (!part || part === '.') continue;
+    if (part === '..') {
+      resolved.pop();
+    } else {
+      resolved.push(part);
     }
-
-    return resolved.join('/');
   }
 
-  return to;
+  return resolved.join('/');
 }
 
-function topoSortModules(files, entryPoint) {
-  const filenames = Object.keys(files);
-  const dependencyMap = new Map();
-  const importPattern = /import\s+(?:[\s\S]+?)?from\s+['"]([^'"]+)['"]/g;
+async function bundleProject(files, entryPoint) {
+  if (!(entryPoint in files)) {
+    throw new Error(`Entry point '${entryPoint}' not found`);
+  }
 
-  for (const filename of filenames) {
-    const source = files[filename] || '';
-    const deps = [];
-    source.replace(importPattern, (match, specifier) => {
-      const resolved = resolveImport(filename, specifier);
-      if (files[resolved]) {
-        deps.push(resolved);
+  const { code } = await bundle({
+    entry: entryPoint,
+    resolve: (specifier, fromId) => {
+      const resolved = resolveImport(fromId, specifier);
+      if (!(resolved in files)) {
+        throw new Error(`Cannot find module '${specifier}' imported from '${fromId}'`);
       }
-      return match;
-    });
-    dependencyMap.set(filename, deps);
-  }
+      return resolved;
+    },
+    load: (id) => transformJSX(files[id], id),
+    onExternal: 'error',
+    exposeEntryFunctions: true,
+  });
 
-  const visited = new Set();
-  const order = [];
-
-  const visit = (file) => {
-    if (!files[file] || visited.has(file)) return;
-    visited.add(file);
-    const deps = dependencyMap.get(file) || [];
-    for (const dep of deps) {
-      visit(dep);
-    }
-    order.push(file);
-  };
-
-  if (entryPoint) {
-    visit(entryPoint);
-  }
-
-  for (const filename of filenames) {
-    if (!visited.has(filename)) {
-      visit(filename);
-    }
-  }
-
-  return order;
+  return code;
 }
 
-function bundleModules(files, entryPoint) {
-  const order = topoSortModules(files, entryPoint);
-  let bundledCode = 'const __modules = {};\n';
+function evaluateEntryModule(bundledCode) {
+  const getEntryModule = new Function('h', 'Fragment', `
+    ${bundledCode}
+    return __ono_entry;
+  `);
 
-  for (const filename of order) {
-    const transformedCode = transformJSX(files[filename], filename);
-    let code = transformedCode;
-    const exportMappings = new Map();
-
-    const addExport = (exportName, localName = exportName) => {
-      if (!exportName || exportMappings.has(exportName)) return;
-      exportMappings.set(exportName, localName);
-    };
-
-    code = code.replace(/import\s+{([^}]+)}\s+from\s+['"]([^'"]+)['"]/g, (match, imports, path) => {
-      const resolvedPath = resolveImport(filename, path);
-      const importNames = imports.split(',').map(part => part.trim()).filter(Boolean);
-
-      return importNames
-        .map(name => {
-          const [local, alias] = name.split(/\s+as\s+/).map(token => token && token.trim());
-          const localName = alias || local;
-          const exportName = local;
-          return `const ${localName} = __modules['${resolvedPath}']['${exportName}'];`;
-        })
-        .join('\n');
-    });
-
-    code = code.replace(/import\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g, (match, localName, path) => {
-      const resolvedPath = resolveImport(filename, path);
-      return `const ${localName} = __modules['${resolvedPath}']['default'];`;
-    });
-
-    code = code.replace(/import\s+\*\s+as\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g, (match, localName, path) => {
-      const resolvedPath = resolveImport(filename, path);
-      return `const ${localName} = __modules['${resolvedPath}'];`;
-    });
-
-    code = code.replace(/export\s+default\s+function\s+([A-Za-z_$][\w$]*)/g, (match, name) => {
-      addExport('default', name);
-      return `function ${name}`;
-    });
-
-    code = code.replace(/export\s+default\s+([A-Za-z_$][\w$]*)/g, (match, name) => {
-      addExport('default', name);
-      return `${name}`;
-    });
-
-    code = code.replace(/export\s+(const|let|var)\s+([A-Za-z_$][\w$]*)/g, (match, kind, name) => {
-      addExport(name);
-      return `${kind} ${name}`;
-    });
-
-    code = code.replace(/export\s+function\s+([A-Za-z_$][\w$]*)/g, (match, name) => {
-      addExport(name);
-      return `function ${name}`;
-    });
-
-    code = code.replace(/export\s+class\s+([A-Za-z_$][\w$]*)/g, (match, name) => {
-      addExport(name);
-      return `class ${name}`;
-    });
-
-    code = code.replace(/export\s*{\s*([^}]+)\s*};?/g, (match, names) => {
-      names
-        .split(',')
-        .map(part => part.trim())
-        .filter(Boolean)
-        .forEach(part => {
-          const [local, alias] = part.split(/\s+as\s+/).map(token => token && token.trim());
-          addExport(alias || local, local);
-        });
-      return '';
-    });
-
-    code = code.replace(/export\s*{\s*};?/g, '');
-
-    if (filename === entryPoint) {
-      const functionMatches = code.matchAll(/function\s+([A-Za-z_$][\w$]*)/g);
-      for (const match of functionMatches) {
-        const name = match[1];
-        addExport(name);
-      }
-    }
-
-    const exportEntries = Array.from(exportMappings.entries()).map(([exportName, localName]) => {
-      if (exportName === 'default') {
-        return `'default': ${localName}`;
-      }
-      if (exportName === localName) {
-        return exportName;
-      }
-      return `'${exportName}': ${localName}`;
-    });
-
-    const exportsObject = exportEntries.length > 0 ? `{ ${exportEntries.join(', ')} }` : '{}';
-
-    bundledCode += `
-__modules['${filename}'] = (() => {
-  ${code}
-  return ${exportsObject};
-})();
-`;
-  }
-
-  bundledCode += `const __entry = __modules['${entryPoint}'];\n`;
-
-  return bundledCode;
+  return getEntryModule(h, Fragment);
 }
 
-function extractRenderCandidate(entryModule, entryCode) {
+/**
+ * Pick what to render from the entry module: the default export if there
+ * is one, otherwise the last exported function (REPL snippets usually
+ * define components and finish with an App function), otherwise any value.
+ */
+function extractRenderCandidate(entryModule) {
   if (!entryModule || typeof entryModule !== 'object') {
     return null;
   }
@@ -195,21 +80,9 @@ function extractRenderCandidate(entryModule, entryCode) {
     return () => defaultExport;
   }
 
-  const lastCallMatch = entryCode.match(/([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*$/m);
-  if (lastCallMatch) {
-    const lastCallName = lastCallMatch[1];
-    const candidate = entryModule[lastCallName];
-    if (typeof candidate === 'function') {
-      return candidate;
-    }
-    if (candidate !== undefined) {
-      return () => candidate;
-    }
-  }
-
-  const fallbackFunction = Object.values(entryModule).find(value => typeof value === 'function');
-  if (fallbackFunction) {
-    return fallbackFunction;
+  const functions = Object.values(entryModule).filter((value) => typeof value === 'function');
+  if (functions.length > 0) {
+    return functions[functions.length - 1];
   }
 
   const firstValue = Object.values(entryModule)[0];
@@ -220,20 +93,10 @@ function extractRenderCandidate(entryModule, entryCode) {
   return null;
 }
 
-function evaluateEntryModule(bundledCode) {
-  const getEntryModule = new Function('h', `
-    ${bundledCode}
-    return __entry;
-  `);
-
-  return getEntryModule(h);
-}
-
 export async function compileProject(files, entryPoint = 'index.jsx', options = {}) {
-  const bundled = bundleModules(files, entryPoint);
+  const bundled = await bundleProject(files, entryPoint);
   const entryModule = evaluateEntryModule(bundled);
-  const entryCode = files[entryPoint] || '';
-  const renderCandidate = extractRenderCandidate(entryModule, entryCode);
+  const renderCandidate = extractRenderCandidate(entryModule);
 
   if (!renderCandidate) {
     throw new Error('Unable to determine a render function in the entry module.');

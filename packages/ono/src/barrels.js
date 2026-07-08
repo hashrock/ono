@@ -2,9 +2,18 @@
  * Barrels - Auto-generated barrel files with type inference
  */
 import { readdir, writeFile } from "node:fs/promises";
-import { join, basename, dirname, relative } from "node:path";
-import { bundle } from "./bundler.js";
-import { toCamelCase, cleanupTempFile, isJSXFile } from "./utils.js";
+import { join, basename, relative } from "node:path";
+import { importJSXModule } from "./builder.js";
+import { isJSXFile } from "./utils.js";
+
+/**
+ * Convert kebab-case or snake_case to camelCase
+ * @param {string} str - String to convert
+ * @returns {string} camelCase string
+ */
+function toCamelCase(str) {
+  return str.replace(/[-_]([a-z])/g, (_, c) => c.toUpperCase());
+}
 
 /**
  * Infer TypeScript type from a JavaScript value
@@ -88,36 +97,17 @@ async function getBarrelEntries(barrelDir) {
 }
 
 /**
- * Load meta from an entry file by bundling and evaluating
+ * Load meta from an entry file by compiling and evaluating it
  * @param {string} entryPath - Path to the entry file
  * @returns {Promise<Object|null>} Meta object or null
  */
 async function loadMeta(entryPath) {
-  const tempDir = dirname(entryPath);
-  const tempFile = join(tempDir, `_temp_meta_${Date.now()}.js`);
-
   try {
-    // Bundle the file to resolve imports
-    const bundledCode = await bundle(entryPath);
-
-    // Add JSX runtime and extract meta
-    const code = `function h(tag, props, ...children) {
-  return { tag, props: props || {}, children };
-}
-${bundledCode}
-`;
-
-    await writeFile(tempFile, code);
-
-    const moduleUrl = new URL(`file://${tempFile}?t=${Date.now()}`);
-    const module = await import(moduleUrl.href);
+    const module = await importJSXModule(entryPath);
     return module.meta || null;
   } catch (error) {
     console.warn(`Warning: Could not load meta from ${entryPath}:`, error.message);
     return null;
-  } finally {
-    // Clean up
-    await cleanupTempFile(tempFile);
   }
 }
 
@@ -141,15 +131,17 @@ export async function generateBarrel(barrelDir, options = {}) {
   // Generate type definition
   const metaType = generateMetaType(metas);
 
-  // Generate imports with camelCase identifiers
+  // Generate imports with camelCase identifiers.
+  // Import first, then export the local bindings — a plain
+  // `export ... from` would not bring the names into scope for `posts`.
   const imports = entries
     .map((entry, idx) => {
       const camelId = toCamelCase(entry.id);
-      const hasExportedMeta = metas[idx] !== null;
-      if (hasExportedMeta) {
-        return `export { default as ${camelId}, meta as ${camelId}Meta } from './${basename(barrelDir)}/${entry.file}';`;
+      const from = `'./${basename(barrelDir)}/${entry.file}'`;
+      if (metas[idx] !== null) {
+        return `import ${camelId}, { meta as ${camelId}Meta } from ${from};\nexport { ${camelId}, ${camelId}Meta };`;
       }
-      return `export { default as ${camelId} } from './${basename(barrelDir)}/${entry.file}';`;
+      return `import ${camelId} from ${from};\nexport { ${camelId} };`;
     })
     .join("\n");
 

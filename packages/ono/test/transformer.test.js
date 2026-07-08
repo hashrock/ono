@@ -154,3 +154,113 @@ test("transformJSX - nested Fragment", () => {
   assert.ok(result.includes('h("div"'));
   assert.ok(result.includes('h("span"'));
 });
+
+// --- Output snapshots (update with: npm run test:update) ---
+
+const raw = { serializers: [(value) => value] };
+
+test("transformJSX snapshot - component function with JSX", (t) => {
+  const input = `
+function BlogPost({ title, children }) {
+  return (
+    <article className="blog-post">
+      <h1>{title}</h1>
+      <div className="content">
+        {children}
+      </div>
+    </article>
+  );
+}`;
+  t.assert.snapshot(transformJSX(input), raw);
+});
+
+test("transformJSX snapshot - JSX with expressions", (t) => {
+  const input = `
+const todos = items.map(item => (
+  <li key={item.id} className={item.completed ? 'completed' : ''}>
+    <input
+      type="checkbox"
+      checked={item.completed}
+      onChange={() => toggle(item.id)}
+    />
+    <span>{item.text}</span>
+    <button onClick={() => remove(item.id)}>×</button>
+  </li>
+));`;
+  t.assert.snapshot(transformJSX(input), raw);
+});
+
+test("transformJSX snapshot - JSX fragments", (t) => {
+  const input = `
+const content = (
+  <>
+    <h1>Title</h1>
+    <p>First paragraph</p>
+    <p>Second paragraph</p>
+  </>
+);`;
+  t.assert.snapshot(transformJSX(input), raw);
+});
+
+test("transformJSX snapshot - complex component with imports", (t) => {
+  const input = `
+import { useState } from 'react';
+import { Header } from './components/Header';
+import { Footer } from './components/Footer';
+
+export default function App() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div className="app">
+      <Header title="My App" />
+      <main>
+        <h1>Counter: {count}</h1>
+        <button onClick={() => setCount(count + 1)}>
+          Increment
+        </button>
+      </main>
+      <Footer />
+    </div>
+  );
+}`;
+  t.assert.snapshot(transformJSX(input), raw);
+});
+
+test("transformJSX snapshot - style prop object", (t) => {
+  const input = `
+const styledDiv = (
+  <div
+    style={{
+      backgroundColor: 'red',
+      fontSize: '16px',
+      padding: '10px',
+      border: '1px solid black'
+    }}
+  >
+    Styled content
+  </div>
+);`;
+  t.assert.snapshot(transformJSX(input), raw);
+});
+
+test("transformJSX snapshot - conditional rendering", (t) => {
+  const input = `
+const content = (
+  <div>
+    {isLoggedIn ? (
+      <div>
+        <h1>Welcome back!</h1>
+        <button onClick={logout}>Logout</button>
+      </div>
+    ) : (
+      <div>
+        <h1>Please log in</h1>
+        <button onClick={login}>Login</button>
+      </div>
+    )}
+    {showMessage && <p className="message">{message}</p>}
+  </div>
+);`;
+  t.assert.snapshot(transformJSX(input), raw);
+});
