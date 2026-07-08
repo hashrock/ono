@@ -131,15 +131,17 @@ export async function generateBarrel(barrelDir, options = {}) {
   // Generate type definition
   const metaType = generateMetaType(metas);
 
-  // Generate imports with camelCase identifiers
+  // Generate imports with camelCase identifiers.
+  // Import first, then export the local bindings — a plain
+  // `export ... from` would not bring the names into scope for `posts`.
   const imports = entries
     .map((entry, idx) => {
       const camelId = toCamelCase(entry.id);
-      const hasExportedMeta = metas[idx] !== null;
-      if (hasExportedMeta) {
-        return `export { default as ${camelId}, meta as ${camelId}Meta } from './${basename(barrelDir)}/${entry.file}';`;
+      const from = `'./${basename(barrelDir)}/${entry.file}'`;
+      if (metas[idx] !== null) {
+        return `import ${camelId}, { meta as ${camelId}Meta } from ${from};\nexport { ${camelId}, ${camelId}Meta };`;
       }
-      return `export { default as ${camelId} } from './${basename(barrelDir)}/${entry.file}';`;
+      return `import ${camelId} from ${from};\nexport { ${camelId} };`;
     })
     .join("\n");
 

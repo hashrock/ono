@@ -16,12 +16,14 @@ import path from "node:path";
 export function parseImports(code) {
   const specifiers = [];
 
-  // Match various import patterns:
+  // Match import and re-export patterns:
   // import foo from "bar"
   // import { foo } from "bar"
   // import * as foo from "bar"
   // import "bar"
-  const importRegex = /import\s+(?:[\w{},\s*]+\s+from\s+)?['"]([^'"]+)['"]/g;
+  // export { foo } from "bar"
+  // export * from "bar"
+  const importRegex = /(?:import|export)\s+(?:[\w{},\s*]+\s+from\s+)?['"]([^'"]+)['"]/g;
 
   let match;
   while ((match = importRegex.exec(code)) !== null) {

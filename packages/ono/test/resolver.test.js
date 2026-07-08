@@ -39,6 +39,21 @@ test("parseImports - named imports", () => {
   assert.deepStrictEqual(result, ["./utils.js"]);
 });
 
+test("parseImports - re-exports (barrel files)", () => {
+  const code = `
+export { default as helloWorld, meta as helloWorldMeta } from './blog/hello-world.tsx';
+export * from './blog/getting-started.tsx';
+export const entries = ['hello-world'];
+  `.trim();
+
+  const result = parseImports(code);
+
+  assert.deepStrictEqual(result, [
+    "./blog/hello-world.tsx",
+    "./blog/getting-started.tsx",
+  ]);
+});
+
 test("parseImports - mixed imports", () => {
   const code = `
 import React from "react";
