@@ -27,11 +27,11 @@ async function getResetCSS() {
 /**
  * Create UnoCSS generator with default config
  * @param {object} userConfig - User configuration
- * @returns {Promise<object>} UnoCSS generator instance
+ * @returns {Promise<any>} UnoCSS generator instance
  */
 export async function createUnoGenerator(userConfig = {}) {
   return await createGenerator({
-    presets: [presetUno()],
+    presets: [/** @type {any} */ (presetUno())],
     ...userConfig,
   });
 }

@@ -1,3 +1,5 @@
+// @ts-nocheck — consumes the parser's anonymous-tuple combinator results;
+// checkJs adds noise here without catching real bugs (see parser.js).
 /**
  * Mini bundler - browser-compatible.
  *

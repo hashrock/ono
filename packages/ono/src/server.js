@@ -12,6 +12,7 @@ import { DIRS, PORTS, MIME_TYPES } from "./constants.js";
 const RELOAD_PATH = "/__ono_reload";
 const RELOAD_SCRIPT = `<script>new EventSource("${RELOAD_PATH}").onmessage = () => location.reload();</script>`;
 
+/** @param {string} html */
 function injectReloadScript(html) {
   if (/<\/body>/i.test(html)) {
     return html.replace(/<\/body>/i, `${RELOAD_SCRIPT}</body>`);
@@ -62,7 +63,9 @@ export async function createDevServer(options) {
 
     try {
       const content = await readFile(filePath);
-      const contentType = MIME_TYPES[extname(filePath)] || "application/octet-stream";
+      const contentType =
+        MIME_TYPES[/** @type {keyof typeof MIME_TYPES} */ (extname(filePath))] ||
+        "application/octet-stream";
       res.writeHead(200, { "Content-Type": contentType });
 
       if (filePath.endsWith(".html")) {
@@ -90,6 +93,7 @@ export async function createDevServer(options) {
   };
 
   return new Promise((resolvePromise, rejectPromise) => {
+    /** @param {any} err */
     const onError = (err) => {
       if (err.code === "EADDRINUSE") {
         const nextPort = port + 1;

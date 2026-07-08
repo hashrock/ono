@@ -13,7 +13,11 @@ import { h, Fragment } from '../jsx-runtime.js';
 import { bundle } from '../bundler.js';
 import { getUnoGenerator } from './unocss.js';
 
-/** Join a relative specifier against the importing file's virtual path */
+/**
+ * Join a relative specifier against the importing file's virtual path
+ * @param {string} fromId
+ * @param {string} specifier
+ */
 function resolveImport(fromId, specifier) {
   const fromParts = fromId.split('/').slice(0, -1);
   const targetParts = specifier.split('/');
@@ -31,6 +35,10 @@ function resolveImport(fromId, specifier) {
   return resolved.join('/');
 }
 
+/**
+ * @param {Record<string, string>} files
+ * @param {string} entryPoint
+ */
 async function bundleProject(files, entryPoint) {
   if (!(entryPoint in files)) {
     throw new Error(`Entry point '${entryPoint}' not found`);
@@ -53,6 +61,7 @@ async function bundleProject(files, entryPoint) {
   return code;
 }
 
+/** @param {string} bundledCode */
 function evaluateEntryModule(bundledCode) {
   const getEntryModule = new Function('h', 'Fragment', `
     ${bundledCode}
@@ -66,6 +75,7 @@ function evaluateEntryModule(bundledCode) {
  * Pick what to render from the entry module: the default export if there
  * is one, otherwise the last exported function (REPL snippets usually
  * define components and finish with an App function), otherwise any value.
+ * @param {any} entryModule
  */
 function extractRenderCandidate(entryModule) {
   if (!entryModule || typeof entryModule !== 'object') {
@@ -93,6 +103,11 @@ function extractRenderCandidate(entryModule) {
   return null;
 }
 
+/**
+ * @param {Record<string, string>} files
+ * @param {string} entryPoint
+ * @param {{ enableUno?: boolean, unoConfig?: any }} [options]
+ */
 export async function compileProject(files, entryPoint = 'index.jsx', options = {}) {
   const bundled = await bundleProject(files, entryPoint);
   const entryModule = evaluateEntryModule(bundled);

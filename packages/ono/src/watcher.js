@@ -10,9 +10,13 @@ import { TIMING, DIRS } from "./constants.js";
 
 /**
  * Create a debounced async runner that logs errors instead of throwing.
+ * @param {(...args: any[]) => Promise<void> | void} fn
+ * @param {number} [ms]
  */
 function debounce(fn, ms = TIMING.DEBOUNCE_MS) {
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
   let timeout;
+  /** @param {...any} args */
   return (...args) => {
     clearTimeout(timeout);
     timeout = setTimeout(async () => {
@@ -27,6 +31,7 @@ function debounce(fn, ms = TIMING.DEBOUNCE_MS) {
 
 /**
  * Trigger onRebuild callback and browser reload.
+ * @param {{ onRebuild?: Function, reload?: Function }} opts
  */
 async function afterRebuild({ onRebuild, reload }) {
   if (onRebuild) await onRebuild();

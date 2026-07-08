@@ -54,7 +54,7 @@ export function createElement(tag, props, ...children) {
 /**
  * JSX runtime function (react-jsx transform)
  * @param {string|Function} tag - HTML tag name or component function
- * @param {Object} props - Element properties/attributes (includes children)
+ * @param {Record<string, any> | null | undefined} props - Element properties/attributes (includes children)
  * @returns {Object} VNode object
  */
 export function jsx(tag, props) {

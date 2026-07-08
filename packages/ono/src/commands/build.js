@@ -69,6 +69,10 @@ export async function copyPublicFiles(outputDir = DIRS.OUTPUT) {
     return;
   }
 
+  /**
+   * @param {string} src
+   * @param {string} dest
+   */
   async function copyRecursive(src, dest) {
     const entries = await readdir(src, { withFileTypes: true });
 

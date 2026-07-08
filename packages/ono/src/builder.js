@@ -66,7 +66,7 @@ export async function compileBundle(entryFile) {
  * Bundle a JSX entry file (with its local imports) and import it.
  * A unique temp file per build doubles as ESM cache-busting for rebuilds.
  * @param {string} entryFile - Path to the entry file
- * @returns {Promise<object>} The imported module namespace
+ * @returns {Promise<any>} The imported module namespace
  */
 export async function importJSXModule(entryFile) {
   const resolvedEntry = resolve(process.cwd(), entryFile);

@@ -17,6 +17,8 @@ function toCamelCase(str) {
 
 /**
  * Infer TypeScript type from a JavaScript value
+ * @param {unknown} value
+ * @returns {string}
  */
 function inferType(value) {
   if (value === null) return "null";
@@ -36,12 +38,15 @@ function inferType(value) {
 
 /**
  * Generate Meta type definition from collected metas
+ * @param {Array<Record<string, unknown> | null>} metas
  */
 function generateMetaType(metas) {
   if (metas.length === 0) return "export type Meta = Record<string, never>;";
 
   // Collect all keys and their occurrence count
+  /** @type {Record<string, number>} */
   const keyCounts = {};
+  /** @type {Record<string, string>} */
   const keyTypes = {};
 
   for (const meta of metas) {
@@ -99,7 +104,7 @@ async function getBarrelEntries(barrelDir) {
 /**
  * Load meta from an entry file by compiling and evaluating it
  * @param {string} entryPath - Path to the entry file
- * @returns {Promise<Object|null>} Meta object or null
+ * @returns {Promise<Record<string, unknown> | null>} Meta object or null
  */
 async function loadMeta(entryPath) {
   try {
@@ -113,6 +118,8 @@ async function loadMeta(entryPath) {
 
 /**
  * Generate a barrel file for a directory
+ * @param {string} barrelDir
+ * @param {{ silent?: boolean }} [options]
  */
 export async function generateBarrel(barrelDir, options = {}) {
   const { silent = false } = options;
@@ -189,6 +196,8 @@ ${mappingExport}
 
 /**
  * Generate all barrel files in a directory
+ * @param {string} barrelsRoot
+ * @param {{ silent?: boolean }} [options]
  */
 export async function generateBarrels(barrelsRoot, options = {}) {
   const { silent = false } = options;

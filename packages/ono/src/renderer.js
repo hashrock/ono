@@ -4,7 +4,9 @@
 import { SELF_CLOSING_TAGS } from "./constants.js";
 import { Fragment } from "./jsx-runtime.js";
 
+/** @param {unknown} text */
 function escapeHtml(text) {
+  /** @type {Record<string, string>} */
   const map = {
     '&': '&amp;',
     '<': '&lt;',
@@ -15,10 +17,12 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, (char) => map[char]);
 }
 
+/** @param {string} str */
 function camelToKebab(str) {
   return str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }
 
+/** @param {string | Record<string, unknown>} style */
 function styleToString(style) {
   if (typeof style === 'string') {
     return style;
@@ -29,6 +33,7 @@ function styleToString(style) {
     .join('; ');
 }
 
+/** @param {Record<string, any> | null | undefined} props */
 function renderAttributes(props) {
   if (!props) return '';
 
@@ -60,12 +65,20 @@ function renderAttributes(props) {
   return attributes.length > 0 ? ' ' + attributes.join(' ') : '';
 }
 
+/**
+ * @param {any[] | undefined} children
+ * @returns {string}
+ */
 function renderChildren(children) {
   return children && children.length > 0
     ? children.map(renderToString).join('')
     : '';
 }
 
+/**
+ * @param {any} vnode
+ * @returns {string}
+ */
 export function renderToString(vnode) {
   if (vnode == null || typeof vnode === 'boolean') {
     return '';

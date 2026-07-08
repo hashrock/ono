@@ -1,3 +1,5 @@
+// @ts-nocheck — parser combinators return anonymous tuples that TypeScript
+// can't usefully infer; checkJs adds noise here without catching real bugs.
 /**
  * Parser combinators and an ES module-syntax parser.
  *
