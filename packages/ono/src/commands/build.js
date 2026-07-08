@@ -5,7 +5,6 @@ import { resolve } from "node:path";
 import { copyFile, mkdir, readdir, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { loadUnoConfig } from "../unocss.js";
 import { buildFile, buildFiles, generateUnoCSS } from "../builder.js";
 import { generateBarrels } from "../barrels.js";
 import { DIRS } from "../constants.js";
@@ -107,8 +106,6 @@ export async function runBuildCommand(args) {
     process.exit(0);
   }
 
-  const unocssConfig = await loadUnoConfig();
-
   // Generate barrel files if barrels directory exists
   await initializeBarrels();
 
@@ -117,16 +114,16 @@ export async function runBuildCommand(args) {
   const inputStat = await stat(inputPath);
 
   if (inputStat.isDirectory()) {
-    await buildFiles(input, { outputDir, unocssConfig });
+    await buildFiles(input, { outputDir });
   } else {
-    await buildFile(input, { outputDir, unocssConfig });
+    await buildFile(input, { outputDir });
   }
 
   // Copy public files
   await copyPublicFiles(outputDir);
 
   // Generate UnoCSS
-  await generateUnoCSS({ outputDir, unocssConfig });
+  await generateUnoCSS({ outputDir });
 
   console.log("\n✨ Build complete!");
 }

@@ -91,24 +91,3 @@ export const HTTP_STATUS = {
   NOT_FOUND: 404,
   SERVER_ERROR: 500,
 };
-
-/**
- * Inline JSX runtime for bundled output
- * This is injected into bundled files to provide JSX support without external dependencies
- */
-export const INLINE_JSX_RUNTIME = `function flattenChildren(children) {
-  const result = [];
-  for (const child of children) {
-    if (child === null || child === undefined || typeof child === 'boolean') continue;
-    if (Array.isArray(child)) {
-      result.push(...flattenChildren(child));
-    } else {
-      result.push(child);
-    }
-  }
-  return result;
-}
-function h(tag, props, ...children) {
-  return { tag, props: props || {}, children: flattenChildren(children) };
-}
-`;

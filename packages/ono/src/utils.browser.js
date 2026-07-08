@@ -4,29 +4,6 @@
  */
 
 /**
- * Flatten array recursively and filter out falsy values (null, undefined, boolean)
- * @param {any[]} children - Array of children to flatten
- * @returns {any[]} Flattened array with falsy values removed
- */
-export function flattenChildren(children) {
-  const result = [];
-
-  for (const child of children) {
-    if (child === null || child === undefined || typeof child === "boolean") {
-      continue;
-    }
-
-    if (Array.isArray(child)) {
-      result.push(...flattenChildren(child));
-    } else {
-      result.push(child);
-    }
-  }
-
-  return result;
-}
-
-/**
  * Check if a filename has a JSX extension (.jsx or .tsx)
  * @param {string} filename - The filename to check
  * @returns {boolean} True if the file has a JSX extension

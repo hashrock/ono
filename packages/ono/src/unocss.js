@@ -4,8 +4,9 @@
 
 import { createGenerator, presetUno } from "unocss";
 import fs from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,19 +43,20 @@ export async function createUnoGenerator(userConfig = {}) {
 }
 
 /**
- * Load UnoCSS config from file
- * @param {string} configPath - Path to config file
+ * Load UnoCSS config from file (defaults to uno.config.js in the project root).
+ * Returns an empty config when the file doesn't exist; errors inside an
+ * existing config file are NOT swallowed.
+ * @param {string} [configPath] - Path to config file
  * @returns {Promise<object>} Configuration object
  */
 export async function loadUnoConfig(configPath) {
-  try {
-    const configUrl = `file://${path.resolve(configPath)}?t=${Date.now()}`;
-    const module = await import(configUrl);
-    return module.default || module;
-  } catch (error) {
-    // Config file doesn't exist, return empty config
+  const resolved = path.resolve(process.cwd(), configPath || "uno.config.js");
+  if (!existsSync(resolved)) {
     return {};
   }
+  const configUrl = `${pathToFileURL(resolved).href}?t=${Date.now()}`;
+  const module = await import(configUrl);
+  return module.default || module;
 }
 
 /**

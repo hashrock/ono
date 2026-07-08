@@ -3,7 +3,6 @@
  */
 import { resolve, relative } from "node:path";
 import { stat } from "node:fs/promises";
-import { loadUnoConfig } from "../unocss.js";
 import { createDevServer } from "../server.js";
 import { buildFile, buildFiles, generateUnoCSS } from "../builder.js";
 import { watchFile, watchFiles, createWebSocketServer } from "../watcher.js";
@@ -36,8 +35,6 @@ export function parseDevArgs(args) {
 export async function runDevCommand(args) {
   const { input, port, outputDir } = parseDevArgs(args);
 
-  const unocssConfig = await loadUnoConfig();
-
   // Generate barrel files if barrels directory exists
   await initializeBarrels();
 
@@ -46,11 +43,11 @@ export async function runDevCommand(args) {
   const isDirectory = inputStat.isDirectory();
 
   const initialBuild = isDirectory
-    ? await buildFiles(input, { outputDir, unocssConfig })
-    : [await buildFile(input, { outputDir, unocssConfig })];
+    ? await buildFiles(input, { outputDir })
+    : [await buildFile(input, { outputDir })];
 
   await copyPublicFiles(outputDir);
-  await generateUnoCSS({ outputDir, unocssConfig });
+  await generateUnoCSS({ outputDir });
 
   const { wss } = createWebSocketServer();
 
@@ -68,7 +65,6 @@ export async function runDevCommand(args) {
 
   const watchOpts = {
     outputDir,
-    unocssConfig,
     wss,
     onRebuild: () => copyPublicFiles(outputDir),
   };

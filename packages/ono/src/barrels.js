@@ -4,6 +4,7 @@
 import { readdir, writeFile } from "node:fs/promises";
 import { join, basename, dirname, relative } from "node:path";
 import { bundle } from "./bundler.js";
+import { getInlineRuntime } from "./builder.js";
 import { toCamelCase, cleanupTempFile, isJSXFile } from "./utils.js";
 
 /**
@@ -100,12 +101,8 @@ async function loadMeta(entryPath) {
     // Bundle the file to resolve imports
     const bundledCode = await bundle(entryPath);
 
-    // Add JSX runtime and extract meta
-    const code = `function h(tag, props, ...children) {
-  return { tag, props: props || {}, children };
-}
-${bundledCode}
-`;
+    // Add the shared JSX runtime and extract meta
+    const code = `${await getInlineRuntime()}\n${bundledCode}\n`;
 
     await writeFile(tempFile, code);
 

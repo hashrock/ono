@@ -9,7 +9,6 @@ import { join } from "node:path";
 
 // Re-export browser-compatible utilities for backward compatibility
 export {
-  flattenChildren,
   isJSXFile,
   isHTMLFile,
   toCamelCase,

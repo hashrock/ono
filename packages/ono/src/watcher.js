@@ -67,16 +67,15 @@ async function afterRebuild({ onRebuild, wss }) {
  * @param {string} inputPattern - Input directory to watch
  * @param {Object} options - Watch options
  * @param {string} [options.outputDir] - Output directory
- * @param {Object} [options.unocssConfig] - UnoCSS configuration
  * @param {Function} [options.onRebuild] - Callback after rebuild
  * @param {WebSocketServer} [options.wss] - WebSocket server for live reload
  * @returns {Promise<{watcher: any, publicWatcher?: any, barrelsWatcher?: any}>}
  */
 export async function watchFiles(inputPattern, options = {}) {
-  const { outputDir = DIRS.OUTPUT, unocssConfig, onRebuild, wss } = options;
-  const buildOpts = { outputDir, unocssConfig, silent: false };
+  const { outputDir = DIRS.OUTPUT, onRebuild, wss } = options;
 
   const pagesDir = resolve(process.cwd(), inputPattern);
+  const buildOpts = { outputDir, inputRoot: pagesDir, silent: false };
   const publicDir = resolve(process.cwd(), DIRS.PUBLIC);
   const barrelsDir = resolve(process.cwd(), DIRS.BARRELS);
 
@@ -86,7 +85,7 @@ export async function watchFiles(inputPattern, options = {}) {
     console.log(`\n📝 File changed: ${relative(process.cwd(), file)}`);
     console.log("🔄 Rebuilding...\n");
     await buildFile(file, buildOpts);
-    await generateUnoCSS(buildOpts);
+    await generateUnoCSS({ outputDir });
     await afterRebuild({ onRebuild, wss });
   });
 
@@ -94,7 +93,7 @@ export async function watchFiles(inputPattern, options = {}) {
     console.log(`\n📝 ${reason}`);
     console.log("🔄 Rebuilding...\n");
     await buildFiles(inputPattern, buildOpts);
-    await generateUnoCSS(buildOpts);
+    await generateUnoCSS({ outputDir });
     await afterRebuild({ onRebuild, wss });
   });
 
@@ -118,7 +117,7 @@ export async function watchFiles(inputPattern, options = {}) {
     console.log("🔄 Regenerating barrel...\n");
     await generateBarrel(barrelDir);
     await buildFiles(inputPattern, buildOpts);
-    await generateUnoCSS(buildOpts);
+    await generateUnoCSS({ outputDir });
     await afterRebuild({ onRebuild, wss });
   });
 
@@ -142,14 +141,13 @@ export async function watchFiles(inputPattern, options = {}) {
  * @param {string} inputFile - Input file to watch
  * @param {Object} options - Watch options
  * @param {string} [options.outputDir] - Output directory
- * @param {Object} [options.unocssConfig] - UnoCSS configuration
  * @param {Function} [options.onRebuild] - Callback after rebuild
  * @param {WebSocketServer} [options.wss] - WebSocket server for live reload
  * @returns {Promise<{watcher: any}>}
  */
 export async function watchFile(inputFile, options = {}) {
-  const { outputDir = DIRS.OUTPUT, unocssConfig, onRebuild, wss } = options;
-  const buildOpts = { outputDir, unocssConfig, silent: false };
+  const { outputDir = DIRS.OUTPUT, onRebuild, wss } = options;
+  const buildOpts = { outputDir, silent: false };
   const resolvedInput = resolve(process.cwd(), inputFile);
 
   console.log(`👀 Watching for changes in ${inputFile}...`);
@@ -158,7 +156,7 @@ export async function watchFile(inputFile, options = {}) {
     console.log(`\n📝 File changed: ${inputFile}`);
     console.log("🔄 Rebuilding...\n");
     await buildFile(resolvedInput, buildOpts);
-    await generateUnoCSS(buildOpts);
+    await generateUnoCSS({ outputDir });
     await afterRebuild({ onRebuild, wss });
   });
 

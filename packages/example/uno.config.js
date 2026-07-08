@@ -1,10 +1,9 @@
-import { defineConfig, presetUno, presetTypography } from "unocss";
-
-export default defineConfig({
-  presets: [
-    presetUno(),
-    presetTypography(),
-  ],
+/**
+ * UnoCSS Configuration
+ * A plain object is enough — Ono applies its default preset (presetUno)
+ * and merges this config on top.
+ */
+export default {
   theme: {
     colors: {
       primary: {
@@ -37,4 +36,4 @@ export default defineConfig({
     "nav-link": "text-gray-600 hover:text-primary-600 transition-colors",
     "section": "py-12",
   },
-});
+};
