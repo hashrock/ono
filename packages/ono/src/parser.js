@@ -452,11 +452,14 @@ const REGEX_ALLOWED_AFTER_WORD = new Set([
   "instanceof", "do", "else", "yield", "await",
 ]);
 const REGEX_ALLOWED_AFTER_CHAR = new Set([...("=([{,;:!&|?+-*%^~<>")]);
+// Like the regex set, but without the statement-boundary chars `;` and `{`:
+// after those, `function` opens a *declaration*, not an expression.
+const EXPR_BEFORE_CHAR = new Set([...("=([,:!&|?+-*%^~<>")]);
 
 /** True when the previous token puts us in expression position */
 function isExpressionContext(lastToken) {
   return (
-    REGEX_ALLOWED_AFTER_CHAR.has(lastToken) ||
+    EXPR_BEFORE_CHAR.has(lastToken) ||
     REGEX_ALLOWED_AFTER_WORD.has(lastToken)
   );
 }
