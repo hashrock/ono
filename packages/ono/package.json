@@ -9,6 +9,8 @@
     "./jsx-runtime": "./src/jsx-runtime.js",
     "./renderer": "./src/renderer.js",
     "./transformer": "./src/transformer.js",
+    "./parser": "./src/parser.js",
+    "./bundler": "./src/bundler.js",
     "./barrels": "./src/barrels.js",
     "./browser/compiler": "./src/browser/compiler.js",
     "./browser/unocss": "./src/browser/unocss.js"

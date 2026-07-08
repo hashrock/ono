@@ -1,10 +1,10 @@
 /**
  * Build utilities for Ono SSG
  *
- * Pages are compiled file-by-file into a per-build temp directory that
- * mirrors the project layout, then the entry is imported with Node's own
- * module resolution. No bundling: evaluation order, cycles, and package
- * imports are all handled by Node.
+ * Pages are bundled with the browser-compatible mini bundler
+ * (bundler.js + parser.js), written to a single temp file, and imported.
+ * Package (bare) imports are hoisted to the top of the bundle where
+ * Node's own resolution handles them.
  */
 import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { resolve, join, dirname, basename, relative } from "node:path";
@@ -12,7 +12,7 @@ import { pathToFileURL } from "node:url";
 import { renderToString } from "./renderer.js";
 import { generateCSSFromFiles, loadUnoConfig } from "./unocss.js";
 import { transformJSX } from "./transformer.js";
-import { collectModules } from "./resolver.js";
+import { bundle } from "./bundler.js";
 import { getFilesRecursively, isJSXFile, isHTMLFile } from "./utils.js";
 import { DIRS } from "./constants.js";
 
@@ -21,76 +21,64 @@ const JSX_RUNTIME_IMPORT = `import { h, Fragment } from ${JSON.stringify(
   new URL("./jsx-runtime.js", import.meta.url).href,
 )};\n`;
 
-/** Directory (inside the project) that holds per-build temp output */
+/** Directory (inside the project) that holds per-build temp files */
 const TEMP_DIR = ".ono";
 
 let buildCounter = 0;
 
 /**
- * Rewrite relative .jsx/.tsx/.ts import specifiers to .js so they resolve
- * against the compiled files in the temp directory.
+ * Bundle an entry file into a single ES module source string
+ * @param {string} entryFile - Absolute path to the entry file
+ * @returns {Promise<string>} Bundled module source
  */
-function rewriteRelativeImports(code) {
-  return code.replace(
-    /^((?:import|export)[^'"]*['"])(\.[^'"]+)\.(?:jsx|tsx|ts)(['"])/gm,
-    (_match, head, base, tail) => `${head}${base}.js${tail}`,
-  );
-}
+export async function compileBundle(entryFile) {
+  const { code, entryExports, externalBindings } = await bundle({
+    entry: entryFile,
+    resolve: (specifier, fromId) => resolve(dirname(fromId), specifier),
+    load: async (id) => {
+      let source;
+      try {
+        source = await readFile(id, "utf-8");
+      } catch (error) {
+        throw new Error(`Cannot read file: ${id}\n${error.message}`);
+      }
+      return transformJSX(source, id);
+    },
+  });
 
-/** True when the file imports the runtime itself (skip injection) */
-function importsOwnRuntime(source) {
-  return /from\s+['"]@hashrock\/ono(?:\/jsx-runtime(?:\.js)?)?['"]/.test(source);
+  // Provide h/Fragment unless a page pulls in the runtime itself
+  const header =
+    externalBindings.has("h") || externalBindings.has("Fragment") ? "" : JSX_RUNTIME_IMPORT;
+
+  // Re-export the entry's exports so the bundle behaves like the entry module
+  const footer = entryExports
+    .map((name) =>
+      name === "default"
+        ? "export default __ono_entry.default;"
+        : `export const ${name} = __ono_entry[${JSON.stringify(name)}];`,
+    )
+    .join("\n");
+
+  return `${header}${code}\n${footer}\n`;
 }
 
 /**
- * Compile an entry file and its local imports into a fresh temp directory.
- * A unique directory per build doubles as ESM cache-busting for rebuilds.
- * @returns {Promise<{tempRoot: string, entryPath: string}>}
- */
-async function compileToTemp(entryFile) {
-  const cwd = process.cwd();
-  const files = await collectModules(entryFile);
-  const tempRoot = join(cwd, TEMP_DIR, `build-${process.pid}-${buildCounter++}`);
-
-  let entryPath;
-  for (const file of files) {
-    const rel = relative(cwd, file);
-    if (rel.startsWith("..")) {
-      throw new Error(
-        `Cannot compile ${file}: imports outside the project directory are not supported`,
-      );
-    }
-
-    const source = await readFile(file, "utf-8");
-    let code = rewriteRelativeImports(transformJSX(source, file));
-    if (!importsOwnRuntime(source)) {
-      code = JSX_RUNTIME_IMPORT + code;
-    }
-
-    const outPath = join(tempRoot, rel.replace(/\.(jsx|tsx|ts)$/, ".js"));
-    await mkdir(dirname(outPath), { recursive: true });
-    await writeFile(outPath, code);
-
-    if (file === entryFile) {
-      entryPath = outPath;
-    }
-  }
-
-  return { tempRoot, entryPath };
-}
-
-/**
- * Compile a JSX entry file (with its local imports) and import it
+ * Bundle a JSX entry file (with its local imports) and import it.
+ * A unique temp file per build doubles as ESM cache-busting for rebuilds.
  * @param {string} entryFile - Path to the entry file
  * @returns {Promise<object>} The imported module namespace
  */
 export async function importJSXModule(entryFile) {
   const resolvedEntry = resolve(process.cwd(), entryFile);
-  const { tempRoot, entryPath } = await compileToTemp(resolvedEntry);
+  const code = await compileBundle(resolvedEntry);
+
+  const tempFile = join(process.cwd(), TEMP_DIR, `build-${process.pid}-${buildCounter++}.js`);
+  await mkdir(dirname(tempFile), { recursive: true });
+  await writeFile(tempFile, code);
   try {
-    return await import(pathToFileURL(entryPath).href);
+    return await import(pathToFileURL(tempFile).href);
   } finally {
-    await rm(tempRoot, { recursive: true, force: true });
+    await rm(tempFile, { force: true });
   }
 }
 
