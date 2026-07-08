@@ -1,0 +1,63 @@
+exports[`transformJSX snapshot - JSX fragments 1`] = `
+const content = (h(Fragment, null,
+    h("h1", null, "Title"),
+    h("p", null, "First paragraph"),
+    h("p", null, "Second paragraph")));
+
+`;
+
+exports[`transformJSX snapshot - JSX with expressions 1`] = `
+const todos = items.map(item => (h("li", { key: item.id, className: item.completed ? 'completed' : '' },
+    h("input", { type: "checkbox", checked: item.completed, onChange: () => toggle(item.id) }),
+    h("span", null, item.text),
+    h("button", { onClick: () => remove(item.id) }, "\\u00D7"))));
+
+`;
+
+exports[`transformJSX snapshot - complex component with imports 1`] = `
+import { useState } from 'react';
+import { Header } from './components/Header';
+import { Footer } from './components/Footer';
+export default function App() {
+    const [count, setCount] = useState(0);
+    return (h("div", { className: "app" },
+        h(Header, { title: "My App" }),
+        h("main", null,
+            h("h1", null,
+                "Counter: ",
+                count),
+            h("button", { onClick: () => setCount(count + 1) }, "Increment")),
+        h(Footer, null)));
+}
+
+`;
+
+exports[`transformJSX snapshot - component function with JSX 1`] = `
+function BlogPost({ title, children }) {
+    return (h("article", { className: "blog-post" },
+        h("h1", null, title),
+        h("div", { className: "content" }, children)));
+}
+
+`;
+
+exports[`transformJSX snapshot - conditional rendering 1`] = `
+const content = (h("div", null,
+    isLoggedIn ? (h("div", null,
+        h("h1", null, "Welcome back!"),
+        h("button", { onClick: logout }, "Logout"))) : (h("div", null,
+        h("h1", null, "Please log in"),
+        h("button", { onClick: login }, "Login"))),
+    showMessage && h("p", { className: "message" }, message)));
+
+`;
+
+exports[`transformJSX snapshot - style prop object 1`] = `
+const styledDiv = (h("div", { style: {
+        backgroundColor: 'red',
+        fontSize: '16px',
+        padding: '10px',
+        border: '1px solid black'
+    } }, "Styled content"));
+
+`;

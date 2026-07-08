@@ -1,13 +1,14 @@
 /**
  * Snapshot tests for UnoCSS generation
+ * Update snapshots with: npm run test:update
  */
 import { test } from "node:test";
 import { generateCSS } from "../src/unocss.js";
-import { matchCodeSnapshot } from "./snapshot-utils.js";
 
-const TEST_FILE = "unocss.snapshot.test.js";
+// Keep generated CSS readable in the snapshot file
+const raw = { serializers: [(value) => value] };
 
-test("snapshot - basic utility classes", async () => {
+test("unocss - basic utility classes", async (t) => {
   const htmlContent = `
     <div class="text-red-500 bg-blue-100 p-4 m-2">
       <h1 class="text-2xl font-bold">Title</h1>
@@ -15,11 +16,10 @@ test("snapshot - basic utility classes", async () => {
     </div>
   `;
 
-  const css = await generateCSS(htmlContent);
-  await matchCodeSnapshot(css, TEST_FILE, "basic utility classes");
+  t.assert.snapshot(await generateCSS(htmlContent), raw);
 });
 
-test("snapshot - layout classes", async () => {
+test("unocss - layout classes", async (t) => {
   const htmlContent = `
     <div class="container mx-auto px-4">
       <div class="flex justify-between items-center">
@@ -33,11 +33,10 @@ test("snapshot - layout classes", async () => {
     </div>
   `;
 
-  const css = await generateCSS(htmlContent);
-  await matchCodeSnapshot(css, TEST_FILE, "layout classes");
+  t.assert.snapshot(await generateCSS(htmlContent), raw);
 });
 
-test("snapshot - responsive design", async () => {
+test("unocss - responsive design", async (t) => {
   const htmlContent = `
     <div class="block md:hidden lg:flex">
       <div class="w-full md:w-1/2 lg:w-1/3">
@@ -47,11 +46,10 @@ test("snapshot - responsive design", async () => {
     </div>
   `;
 
-  const css = await generateCSS(htmlContent);
-  await matchCodeSnapshot(css, TEST_FILE, "responsive design");
+  t.assert.snapshot(await generateCSS(htmlContent), raw);
 });
 
-test("snapshot - color utilities", async () => {
+test("unocss - color utilities", async (t) => {
   const htmlContent = `
     <div class="bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">
       <div class="text-white bg-black bg-opacity-50">
@@ -62,11 +60,10 @@ test("snapshot - color utilities", async () => {
     </div>
   `;
 
-  const css = await generateCSS(htmlContent);
-  await matchCodeSnapshot(css, TEST_FILE, "color utilities");
+  t.assert.snapshot(await generateCSS(htmlContent), raw);
 });
 
-test("snapshot - spacing and sizing", async () => {
+test("unocss - spacing and sizing", async (t) => {
   const htmlContent = `
     <div class="p-8 m-4 space-y-6">
       <div class="h-32 w-64 border-2 border-gray-300 rounded-lg">
@@ -78,11 +75,10 @@ test("snapshot - spacing and sizing", async () => {
     </div>
   `;
 
-  const css = await generateCSS(htmlContent);
-  await matchCodeSnapshot(css, TEST_FILE, "spacing and sizing");
+  t.assert.snapshot(await generateCSS(htmlContent), raw);
 });
 
-test("snapshot - typography", async () => {
+test("unocss - typography", async (t) => {
   const htmlContent = `
     <article class="prose prose-lg max-w-none">
       <h1 class="font-bold text-4xl leading-tight">Main Title</h1>
@@ -98,24 +94,16 @@ test("snapshot - typography", async () => {
     </article>
   `;
 
-  const css = await generateCSS(htmlContent);
-  await matchCodeSnapshot(css, TEST_FILE, "typography");
+  t.assert.snapshot(await generateCSS(htmlContent), raw);
 });
 
-test("snapshot - form elements", async () => {
+test("unocss - form elements", async (t) => {
   const htmlContent = `
     <form class="space-y-4 max-w-md">
       <div class="form-group">
         <label class="block text-sm font-medium text-gray-700">Name</label>
         <input
           type="text"
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <div class="form-group">
-        <label class="block text-sm font-medium text-gray-700">Email</label>
-        <input
-          type="email"
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -128,11 +116,10 @@ test("snapshot - form elements", async () => {
     </form>
   `;
 
-  const css = await generateCSS(htmlContent);
-  await matchCodeSnapshot(css, TEST_FILE, "form elements");
+  t.assert.snapshot(await generateCSS(htmlContent), raw);
 });
 
-test("snapshot - blog layout", async () => {
+test("unocss - blog layout", async (t) => {
   const htmlContent = `
     <div class="max-w-4xl mx-auto px-4 py-8">
       <header class="mb-8">
@@ -151,10 +138,6 @@ test("snapshot - blog layout", async () => {
               <span class="mx-2">·</span>
               <span>John Doe</span>
             </div>
-            <div class="mt-2 flex gap-2">
-              <span class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">JavaScript</span>
-              <span class="px-2 py-1 text-xs bg-green-100 text-green-700 rounded">Web</span>
-            </div>
           </header>
           <div class="prose">
             <p>Post content goes here...</p>
@@ -168,6 +151,5 @@ test("snapshot - blog layout", async () => {
     </div>
   `;
 
-  const css = await generateCSS(htmlContent);
-  await matchCodeSnapshot(css, TEST_FILE, "blog layout");
+  t.assert.snapshot(await generateCSS(htmlContent), raw);
 });

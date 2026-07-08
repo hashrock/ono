@@ -1,4 +1,0 @@
-Exit Code: 1
-STDOUT:
-STDERR:
-Error: ENOENT: no such file or directory, stat '/PATH/test-tmp/non-existent-dir'

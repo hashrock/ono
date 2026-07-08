@@ -22,11 +22,9 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node --test test/**/*.test.js",
-    "test:watch": "node --test --watch test/**/*.test.js",
-    "test:snapshot": "node --test test/**/*.snapshot.test.js",
-    "test:snapshot:update": "UPDATE_SNAPSHOTS=true node --test test/**/*.snapshot.test.js",
-    "test:all": "npm run test && npm run test:snapshot"
+    "test": "node --test test/*.test.js",
+    "test:watch": "node --test --watch test/*.test.js",
+    "test:update": "node --test --test-update-snapshots test/*.test.js"
   },
   "keywords": [
     "jsx",
@@ -48,7 +46,7 @@
   },
   "homepage": "https://github.com/hashrock/ono#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.3.0"
   },
   "dependencies": {
     "@unocss/core": "^66.5.4",

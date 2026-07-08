@@ -1,0 +1,19 @@
+exports[`renderToString snapshot - HTML entities escaping 1`] = `
+<div title="This has &quot;quotes&quot; &amp; &lt;tags&gt;" data-value="&lt;script&gt;alert(&#039;xss&#039;)&lt;/script&gt;">Content with &lt;em&gt;HTML&lt;/em&gt; &amp; &quot;special&quot; characters</div>
+`;
+
+exports[`renderToString snapshot - complex form 1`] = `
+<form class="contact-form" method="post"><div class="form-group"><label htmlFor="name">Name:</label><input type="text" id="name" name="name" required placeholder="Enter your name" /></div><div class="form-group"><label htmlFor="message">Message:</label><textarea id="message" name="message" rows="4" placeholder="Enter your message"></textarea></div><button type="submit" class="btn btn-primary">Send Message</button></form>
+`;
+
+exports[`renderToString snapshot - component function 1`] = `
+<article class="blog-post"><header><h1>My First Post</h1><p class="author">By John Doe</p></header><div class="content"><p>This is the first paragraph.</p><p>This is the second paragraph.</p></div></article>
+`;
+
+exports[`renderToString snapshot - nested elements 1`] = `
+<div class="container"><h1>Title</h1><p>This is a paragraph with <strong>bold text</strong> and regular text.</p><ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul></div>
+`;
+
+exports[`renderToString snapshot - style object 1`] = `
+<div style="background-color: red; font-size: 16px; margin: 10px 20px">Styled content</div>
+`;
