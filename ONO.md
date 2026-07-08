@@ -97,7 +97,7 @@ export default function Page() {
 
 ```js
 import { renderToString } from "@hashrock/ono/renderer";
-import { bundle } from "@hashrock/ono/bundler";
+import { transformJSX } from "@hashrock/ono/transformer";
 ```
 
 ## 重要なポイント
