@@ -83,8 +83,8 @@ out
 dist
 .output
 
-# Mini JSX temporary files
-.mini-jsx-tmp.js
+# Ono per-build temp directory
+.ono/
 
 # Gatsby files
 .cache/

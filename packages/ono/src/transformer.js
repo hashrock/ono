@@ -29,23 +29,3 @@ export function transformJSX(source, filename = 'input.jsx') {
 
   return result.outputText;
 }
-
-/**
- * Transform JSX file and add necessary imports if not present
- * @param {string} source - JSX source code
- * @param {string} [filename='input.jsx'] - Optional filename
- * @returns {string} Transformed JavaScript with imports
- */
-export function transformJSXWithImports(source, filename = 'input.jsx') {
-  let transformedCode = transformJSX(source, filename);
-
-  // Check if the code uses 'h' function (JSX was transformed)
-  if (transformedCode.includes('h(') && !source.includes('import') && !source.includes('from')) {
-    // Add import statement for h function (and Fragment if used)
-    const usesFragment = transformedCode.includes('Fragment');
-    const imports = usesFragment ? '{ h, Fragment }' : '{ h }';
-    transformedCode = `import ${imports} from './jsx-runtime.js';\n${transformedCode}`;
-  }
-
-  return transformedCode;
-}

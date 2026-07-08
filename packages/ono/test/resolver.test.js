@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseImports, resolveImportPath, collectDependencies } from "../src/resolver.js";
+import { parseImports, resolveImportPath, collectModules } from "../src/resolver.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.join(__dirname, "fixtures");
@@ -11,8 +11,7 @@ test("parseImports - single default import", () => {
   const code = `import Button from "./Button.jsx";`;
   const result = parseImports(code);
 
-  assert.strictEqual(result.length, 1);
-  assert.strictEqual(result[0].specifier, "./Button.jsx");
+  assert.deepStrictEqual(result, ["./Button.jsx"]);
 });
 
 test("parseImports - multiple imports", () => {
@@ -23,9 +22,7 @@ import Button from "./Button.jsx";
 
   const result = parseImports(code);
 
-  assert.strictEqual(result.length, 2);
-  assert.strictEqual(result[0].specifier, "./Card.jsx");
-  assert.strictEqual(result[1].specifier, "./Button.jsx");
+  assert.deepStrictEqual(result, ["./Card.jsx", "./Button.jsx"]);
 });
 
 test("parseImports - no imports", () => {
@@ -39,8 +36,7 @@ test("parseImports - named imports", () => {
   const code = `import { foo, bar } from "./utils.js";`;
   const result = parseImports(code);
 
-  assert.strictEqual(result.length, 1);
-  assert.strictEqual(result[0].specifier, "./utils.js");
+  assert.deepStrictEqual(result, ["./utils.js"]);
 });
 
 test("parseImports - mixed imports", () => {
@@ -84,79 +80,45 @@ test("resolveImportPath - absolute stays absolute", () => {
   assert.strictEqual(result, importPath);
 });
 
-test("collectDependencies - no imports", async () => {
+test("collectModules - no imports", async () => {
   const entryFile = path.join(fixturesDir, "NoImports.jsx");
-  const result = await collectDependencies(entryFile);
+  const result = await collectModules(entryFile);
 
-  assert.strictEqual(result.modules.size, 1);
-  assert.ok(result.modules.has(entryFile));
+  assert.strictEqual(result.size, 1);
+  assert.ok(result.has(entryFile));
 });
 
-test("collectDependencies - single level imports", async () => {
+test("collectModules - single level imports", async () => {
   const entryFile = path.join(fixturesDir, "Card.jsx");
-  const result = await collectDependencies(entryFile);
+  const result = await collectModules(entryFile);
 
   // Card.jsx imports Button.jsx
-  assert.strictEqual(result.modules.size, 2);
-  assert.ok(result.modules.has(entryFile));
+  assert.strictEqual(result.size, 2);
+  assert.ok(result.has(entryFile));
 
   const buttonPath = path.join(fixturesDir, "Button.jsx");
-  assert.ok(result.modules.has(buttonPath));
+  assert.ok(result.has(buttonPath));
 });
 
-test("collectDependencies - nested imports", async () => {
+test("collectModules - nested imports", async () => {
   const entryFile = path.join(fixturesDir, "App.jsx");
-  const result = await collectDependencies(entryFile);
+  const result = await collectModules(entryFile);
 
   // App.jsx imports Card.jsx and Button.jsx
   // Card.jsx also imports Button.jsx
   // Total: App.jsx, Card.jsx, Button.jsx (3 unique files)
-  assert.strictEqual(result.modules.size, 3);
+  assert.strictEqual(result.size, 3);
 
-  const appPath = path.join(fixturesDir, "App.jsx");
-  const cardPath = path.join(fixturesDir, "Card.jsx");
-  const buttonPath = path.join(fixturesDir, "Button.jsx");
-
-  assert.ok(result.modules.has(appPath));
-  assert.ok(result.modules.has(cardPath));
-  assert.ok(result.modules.has(buttonPath));
+  assert.ok(result.has(path.join(fixturesDir, "App.jsx")));
+  assert.ok(result.has(path.join(fixturesDir, "Card.jsx")));
+  assert.ok(result.has(path.join(fixturesDir, "Button.jsx")));
 });
 
-test("collectDependencies - returns dependency graph", async () => {
-  const entryFile = path.join(fixturesDir, "Card.jsx");
-  const result = await collectDependencies(entryFile);
-
-  const cardDeps = result.graph.get(entryFile);
-  assert.ok(cardDeps);
-  assert.strictEqual(cardDeps.length, 1);
-
-  const buttonPath = path.join(fixturesDir, "Button.jsx");
-  assert.ok(cardDeps.includes(buttonPath));
-});
-
-test("collectDependencies - correct evaluation order", async () => {
-  const entryFile = path.join(fixturesDir, "App.jsx");
-  const result = await collectDependencies(entryFile);
-
-  // Button should come before Card (Card depends on Button)
-  // Card should come before App (App depends on Card)
-  const buttonPath = path.join(fixturesDir, "Button.jsx");
-  const cardPath = path.join(fixturesDir, "Card.jsx");
-  const appPath = path.join(fixturesDir, "App.jsx");
-
-  const buttonIndex = result.order.indexOf(buttonPath);
-  const cardIndex = result.order.indexOf(cardPath);
-  const appIndex = result.order.indexOf(appPath);
-
-  assert.ok(buttonIndex < cardIndex, "Button should come before Card");
-  assert.ok(cardIndex < appIndex, "Card should come before App");
-});
-
-test("collectDependencies - handles non-existent file", async () => {
+test("collectModules - handles non-existent file", async () => {
   const entryFile = path.join(fixturesDir, "NonExistent.jsx");
 
   await assert.rejects(
-    async () => await collectDependencies(entryFile),
-    /ENOENT|no such file/i
+    async () => await collectModules(entryFile),
+    /Cannot read file/i
   );
 });

@@ -6,26 +6,7 @@ import { stat } from "node:fs/promises";
 import { createDevServer } from "../server.js";
 import { buildFile, buildFiles, generateUnoCSS } from "../builder.js";
 import { watchFile, watchFiles, createWebSocketServer } from "../watcher.js";
-import { copyPublicFiles, initializeBarrels } from "./build.js";
-import { DIRS, PORTS } from "../constants.js";
-
-/**
- * Parse dev command arguments
- * @param {string[]} args - Command line arguments
- * @returns {{ input: string, port: number, outputDir: string }}
- */
-export function parseDevArgs(args) {
-  const nonOptionArgs = args.filter((arg) => !arg.startsWith("--"));
-  const input = nonOptionArgs[0] || DIRS.PAGES;
-  const port = args.includes("--port")
-    ? parseInt(args[args.indexOf("--port") + 1])
-    : PORTS.SERVER;
-  const outputDir = args.includes("--output")
-    ? args[args.indexOf("--output") + 1]
-    : DIRS.OUTPUT;
-
-  return { input, port, outputDir };
-}
+import { copyPublicFiles, initializeBarrels, parseCommandArgs } from "./build.js";
 
 /**
  * Run the dev command
@@ -33,7 +14,7 @@ export function parseDevArgs(args) {
  * @returns {Promise<void>}
  */
 export async function runDevCommand(args) {
-  const { input, port, outputDir } = parseDevArgs(args);
+  const { input, port, outputDir } = parseCommandArgs(args);
 
   // Generate barrel files if barrels directory exists
   await initializeBarrels();

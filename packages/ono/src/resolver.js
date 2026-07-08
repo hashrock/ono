@@ -1,17 +1,20 @@
 /**
- * Module Resolver - Parse imports and resolve dependencies
+ * Module Resolver - collect the local import graph of an entry file.
+ *
+ * Only relative specifiers are followed; package imports and evaluation
+ * order are left to Node's own module resolution.
  */
 
 import fs from "node:fs/promises";
 import path from "node:path";
 
 /**
- * Parse import statements from source code
+ * Parse import specifiers from source code
  * @param {string} code - Source code
- * @returns {Array} Array of import objects with specifier
+ * @returns {string[]} Array of import specifiers
  */
 export function parseImports(code) {
-  const imports = [];
+  const specifiers = [];
 
   // Match various import patterns:
   // import foo from "bar"
@@ -22,12 +25,10 @@ export function parseImports(code) {
 
   let match;
   while ((match = importRegex.exec(code)) !== null) {
-    imports.push({
-      specifier: match[1]
-    });
+    specifiers.push(match[1]);
   }
 
-  return imports;
+  return specifiers;
 }
 
 /**
@@ -37,70 +38,25 @@ export function parseImports(code) {
  * @returns {string} Absolute path to the imported file
  */
 export function resolveImportPath(importPath, fromFile) {
-  // If it's already an absolute path, return as-is
   if (path.isAbsolute(importPath)) {
     return importPath;
   }
-
-  // For relative imports, resolve relative to the importing file
-  const dir = path.dirname(fromFile);
-  return path.resolve(dir, importPath);
+  return path.resolve(path.dirname(fromFile), importPath);
 }
 
 /**
- * Topological sort for dependency graph
- * @param {Map} graph - Dependency graph (file -> [dependencies])
- * @returns {Array} Sorted array of file paths
- */
-function topologicalSort(graph) {
-  const sorted = [];
-  const visited = new Set();
-  const visiting = new Set();
-
-  function visit(node) {
-    if (visited.has(node)) return;
-    if (visiting.has(node)) {
-      throw new Error(`Circular dependency detected: ${node}`);
-    }
-
-    visiting.add(node);
-
-    const deps = graph.get(node) || [];
-    for (const dep of deps) {
-      visit(dep);
-    }
-
-    visiting.delete(node);
-    visited.add(node);
-    sorted.push(node);
-  }
-
-  // Visit all nodes
-  for (const node of graph.keys()) {
-    visit(node);
-  }
-
-  return sorted;
-}
-
-/**
- * Collect all dependencies recursively
+ * Collect the entry file and all transitively imported local files
  * @param {string} entryFile - Absolute path to entry file
- * @returns {Object} Object with modules (Set), graph (Map), and order (Array)
+ * @returns {Promise<Set<string>>} Absolute paths of all local modules
  */
-export async function collectDependencies(entryFile) {
+export async function collectModules(entryFile) {
   const modules = new Set();
-  const graph = new Map();
   const queue = [entryFile];
 
-  // BFS to collect all dependencies
   while (queue.length > 0) {
     const currentFile = queue.shift();
-
-    // Skip if already processed
     if (modules.has(currentFile)) continue;
 
-    // Read the file
     let source;
     try {
       source = await fs.readFile(currentFile, "utf-8");
@@ -108,30 +64,14 @@ export async function collectDependencies(entryFile) {
       throw new Error(`Cannot read file: ${currentFile}\n${error.message}`);
     }
 
-    // Parse imports
-    const imports = parseImports(source);
-    const dependencies = [];
+    modules.add(currentFile);
 
-    for (const imp of imports) {
-      // Only process relative imports (skip node_modules, etc.)
-      if (imp.specifier.startsWith(".")) {
-        const resolvedPath = resolveImportPath(imp.specifier, currentFile);
-        dependencies.push(resolvedPath);
-        queue.push(resolvedPath);
+    for (const specifier of parseImports(source)) {
+      if (specifier.startsWith(".")) {
+        queue.push(resolveImportPath(specifier, currentFile));
       }
     }
-
-    // Add to modules and graph
-    modules.add(currentFile);
-    graph.set(currentFile, dependencies);
   }
 
-  // Sort dependencies topologically
-  const order = topologicalSort(graph);
-
-  return {
-    modules,
-    graph,
-    order
-  };
+  return modules;
 }
