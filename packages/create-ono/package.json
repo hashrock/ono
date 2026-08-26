@@ -1,6 +1,6 @@
 {
   "name": "create-ono",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Create a new Ono project",
   "type": "module",
   "bin": {
