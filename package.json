@@ -5,5 +5,6 @@
     "test": "pnpm -r test",
     "build": "pnpm -r build"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "version": "0.1.0"
 }
