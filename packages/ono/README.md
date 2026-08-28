@@ -1,6 +1,6 @@
 # @hashrock/ono
 
-ミニマリストなSSGフレームワーク。JSXとTypeScriptのJSXトランスフォーマーを活用。
+ミニマリストなSSGフレームワーク。JSXをsucraseで変換。
 
 ## インストール
 
@@ -23,34 +23,17 @@ npx ono dev index.jsx
 
 ## 機能
 
-- JSXから静的HTMLへの変換
+- JSX/TSXから静的HTMLへの変換（sucrase。型チェックなし）
+- `pages/` ディレクトリによるマルチページ（ディレクトリ構造を保持）
 - ライブリロード付き開発サーバー
-- UnoCSS統合
-- コンテンツコレクション（Markdown）
-- 動的ルート（`[slug].jsx`）
+- UnoCSS統合（`uno.config.js` で拡張可能）
+- `public/` の静的ファイルコピー
+- barrels: ディレクトリ内のJSXを `meta` 付きで一覧化するバレルの自動生成
+- Nodeでもブラウザ（Web Worker）でも動く同一のバンドラー
 
 ## 制限事項
 
-- **React Fragmentは非対応**: `<>...</>` や `<React.Fragment>` はサポートされていません。代わりに配列や親要素でラップしてください。
-
-```jsx
-// NG: React Fragmentは使用不可
-<>
-  <div>Item 1</div>
-  <div>Item 2</div>
-</>
-
-// OK: 配列を使用
-[
-  <div>Item 1</div>,
-  <div>Item 2</div>
-]
-
-// OK: 親要素でラップ
-<div>
-  <div>Item 1</div>
-  <div>Item 2</div>
-</div>
-```
+- **名前空間付きJSX属性は非対応**: `xlink:href="..."` のような属性はsucraseが解釈できません。`{...{ "xlink:href": "..." }}` のようにスプレッドで渡してください。
+- **トップレベル `await` は非対応**: ページモジュールの最上位で `await` は使えません。
 
 詳細なドキュメントは[ルートのREADME](../../README.md)を参照してください。

@@ -1,6 +1,6 @@
 # Ono SSG - LLM 向けガイド
 
-Ono は最小限の JSX 静的サイトジェネレーター。TypeScript の JSX 変換機能を利用。
+Ono は最小限の JSX 静的サイトジェネレーター。JSX/TS の変換に sucrase を利用（型チェックはしない）。
 
 ## インストールと基本コマンド
 
@@ -24,6 +24,7 @@ project/
 │   └── about.jsx         # → dist/about.html
 ├── components/           # 再利用可能コンポーネント
 ├── public/               # 静的ファイル（そのままコピー）
+├── barrels/              # コンテンツ一覧用（任意、後述）
 ├── uno.config.js         # UnoCSS設定（任意）
 └── dist/                 # 出力先
 ```
@@ -93,6 +94,20 @@ export default function Page() {
 <link rel="stylesheet" href="/uno.css" />
 ```
 
+## Barrels（コンテンツ一覧）
+
+`barrels/<name>/*.jsx` を置くと、ビルド時に `barrels/<name>.js` が自動生成される（手で編集しない・`.gitignore` 推奨）。各ファイルは `default`（コンポーネント）と任意の `meta` をエクスポートする。
+
+```jsx
+// barrels/blog/hello.jsx
+export const meta = { title: "Hello", date: "2025-01-04" };
+export default function Hello() { return <article>...</article>; }
+
+// pages/blog.jsx
+import { entries, posts } from "../barrels/blog.js";
+// entries: ID配列 / posts: { [id]: { component, meta } }（meta 未定義なら null）
+```
+
 ## API
 
 ```js
@@ -105,13 +120,15 @@ import { bundle } from "@hashrock/ono/bundler"; // ブラウザ互換ミニバ�
 
 - 各ページは`export default`で完全な HTML 文書を返す関数をエクスポート
 - `class`属性は`class`のまま使用（`className`も可）
+- Fragment `<>...</>` は使用可
 - UnoCSS はクラス名から自動で CSS を生成
+- 非対応: 名前空間付き属性（`xlink:href` → `{...{ "xlink:href": "..." }}` で回避）、トップレベル `await`
 
 ## 注意: @jsxImportSource は使用しない
 
 `/** @jsxImportSource @hashrock/ono */` プラグマは**使用しないこと**。
 
-理由: Ono は TypeScript の classic JSX モード（`h`関数を使用）でトランスパイルするが、`@jsxImportSource`プラグマがあると、TypeScript コンパイラが自動的に automatic JSX モード（`_jsx`/`_jsxs`を使用）に切り替わり、`_jsxs is not defined`エラーが発生する。
+理由: Ono は classic JSX モード（`h`関数を使用）でトランスパイルする。`@jsxImportSource` プラグマは automatic モード用で、意味がない。
 
 ```jsx
 // NG - エラーになる
