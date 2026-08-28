@@ -156,3 +156,17 @@ Unknown command: --version
 Run "ono --help" for usage information
 
 `;
+
+exports[`cli e2e - create-ono template builds 1`] = `
+favicon.ico
+index.html
+uno.css
+`;
+
+exports[`cli e2e - example project builds pages, barrels, public and uno.css 1`] = `
+about.html
+blog.html
+features.html
+index.html
+uno.css
+`;

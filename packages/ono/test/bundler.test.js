@@ -83,7 +83,7 @@ test("bundle - nested directory resolution", async () => {
 });
 
 test("bundle - re-exports (barrel pattern)", async () => {
-  const { entryModule, entryExports } = await evaluate(
+  const { entryModule } = await evaluate(
     {
       "posts/hello.js": `export const meta = { title: "Hello" };\nexport default () => "post";`,
       "blog.js": `import hello, { meta as helloMeta } from "./posts/hello.js";\nexport { hello, helloMeta };`,
@@ -94,7 +94,6 @@ test("bundle - re-exports (barrel pattern)", async () => {
 
   assert.strictEqual(entryModule.hello(), "post");
   assert.strictEqual(entryModule.helloMeta.title, "Hello");
-  assert.deepStrictEqual(entryExports, ["hello", "helloMeta"]);
 });
 
 test("bundle - export star from", async () => {
@@ -173,7 +172,7 @@ test("bundle - onExternal error rejects package imports", async () => {
 });
 
 test("bundle - onExternal hoist moves package imports to the bundle top", async () => {
-  const { code, externalBindings } = await bundleFiles(
+  const { code, externals } = await bundleFiles(
     {
       "index.js": `import { readFile } from "node:fs/promises";\nexport default readFile;`,
     },
@@ -181,8 +180,8 @@ test("bundle - onExternal hoist moves package imports to the bundle top", async 
     { onExternal: "hoist" },
   );
 
-  assert.ok(code.startsWith(`import { readFile } from "node:fs/promises";`));
-  assert.ok(externalBindings.has("readFile"));
+  assert.ok(code.startsWith(`import * as __ono_ext0 from "node:fs/promises";`));
+  assert.deepStrictEqual(externals, ["node:fs/promises"]);
 });
 
 test("bundle - missing module rejects with the loader's error", async () => {
@@ -196,13 +195,41 @@ test("bundle - missing module rejects with the loader's error", async () => {
   );
 });
 
-test("bundle - entryExports lists the entry's export names", async () => {
-  const { entryExports } = await bundleFiles(
+
+// --- Module semantics that must survive a bundler/transformer swap ---------
+
+test("bundle - default export forms: class, `as default`, re-exported default", async () => {
+  const { entryModule } = await evaluate(
     {
-      "index.js": `export default 1;\nexport const meta = {};\nexport function helper() {}`,
+      "cls.js": `export default class Box { static kind = "box"; }`,
+      "alias.js": `const fn = () => "aliased"; export { fn as default };`,
+      "reexp.js": `export { default as Box } from "./cls.js";\nexport { default } from "./alias.js";`,
+      "index.js": `import Box from "./cls.js";\nimport aliased from "./alias.js";\nimport reDefault, { Box as ReBox } from "./reexp.js";\nexport const out = [Box.kind, aliased(), reDefault(), ReBox === Box];`,
     },
     "index.js",
   );
+  assert.deepStrictEqual(entryModule.out, ["box", "aliased", "aliased", true]);
+});
 
-  assert.deepStrictEqual(entryExports, ["default", "meta", "helper"]);
+test("bundle - a module imported via two paths is a single instance", async () => {
+  const { entryModule } = await evaluate(
+    {
+      "state.js": `export const store = { n: 0 }; export const bump = () => ++store.n;`,
+      "a/one.js": `import { bump } from "../state.js"; export const a = bump();`,
+      "b/two.js": `import { bump, store } from "../state.js"; export const b = bump(); export { store };`,
+      "index.js": `import { a } from "./a/one.js";\nimport { b, store } from "./b/two.js";\nexport const result = [a, b, store.n];`,
+    },
+    "index.js",
+  );
+  assert.deepStrictEqual(entryModule.result, [1, 2, 2]);
+});
+
+test("bundle - dynamic import() text does not confuse the bundler", async () => {
+  const { entryModule } = await evaluate(
+    {
+      "index.js": `const lazy = () => import("./never.js");\nexport const isFn = typeof lazy === "function";`,
+    },
+    "index.js",
+  );
+  assert.strictEqual(entryModule.isFn, true);
 });

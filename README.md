@@ -1,12 +1,12 @@
 # Ono
 
-ミニマリストなSSGフレームワーク。JSXとTypeScriptのJSXトランスフォーマーを活用
+ミニマリストなSSGフレームワーク。JSXを[sucrase](https://github.com/alangpierce/sucrase)で変換
 
 ## なぜOnoなのか？
 
-OnoはAstroのミニマルな代替として設計されており、TypeScriptの組み込みJSX変換機能を活用しています。コアとなる哲学は：
+OnoはAstroのミニマルな代替として設計されており、軽量なJSXトランスパイラであるsucraseを活用しています。コアとなる哲学は：
 
-- **最小限の依存関係**: TypeScript標準の`tsx`トランスフォーム機能を使用し、複雑なビルドツールチェーンを回避
+- **最小限の依存関係**: sucrase（純JS・数百KB）によるJSX/TS変換のみで、複雑なビルドツールチェーンを回避
 - **高い移植性**: Web Workersやブラウザ上でも動作できるほど軽量に設計
 - **シンプルなアーキテクチャ**: 静的サイト生成機能の最小限のサブセットに焦点を当て、本当に重要なものに集中
 - **将来のビジョン**: ブラウザベースのREPL体験とクライアントサイドでの静的サイト生成を実現
@@ -77,13 +77,14 @@ npx ono dev index.jsx
 - コンポーネントとpropsのサポート
 - アトミックCSS生成用のUnoCSS統合
 - マルチページサイト用のpagesディレクトリサポート
-- Markdownサポート付きのコンテンツコレクション
-- `[slug].jsx`パターンによる動的ルート
-- TypeScriptのJSXトランスフォームを使用
+- `public/`ディレクトリの静的ファイルコピー
+- barrels: ディレクトリ内のJSXを`meta`付きで一覧化するバレルファイルの自動生成
+- sucraseによるJSX/TypeScript変換（型チェックなし。型検査はエディタや`tsc --noEmit`に委ねる）
 
 ## 制限事項
 
-- **React Fragmentは非対応**: `<>...</>` や `<React.Fragment>` はサポートされていません。代わりに配列や親要素でラップしてください。
+- **名前空間付きJSX属性は非対応**: `xlink:href="..."` のような属性はsucraseが解釈できません。`{...{ "xlink:href": "..." }}` のようにスプレッドで渡してください。
+- **トップレベル `await` は非対応**: ページモジュールの最上位で `await` は使えません。
 
 ## CLI使用方法
 
@@ -157,13 +158,10 @@ export default function App() {
 }
 ```
 
-カスタム設定用に、プロジェクトルートに`uno.config.js`ファイルを作成します：
+カスタム設定用に、プロジェクトルートに`uno.config.js`ファイルを作成します。プレーンなオブジェクトで十分です（Onoが`presetUno`を適用した上でこの設定をマージします）：
 
 ```javascript
-import { presetUno } from "unocss";
-
 export default {
-  presets: [presetUno()],
   theme: {
     colors: {
       primary: "#0070f3",
@@ -175,35 +173,77 @@ export default {
 };
 ```
 
-## ページモード
-
-Onoは`pages/`ディレクトリにJSXファイルを配置することでマルチページサイトの構築をサポートします：
+## プロジェクト構造
 
 ```
-pages/
-├── index.jsx          → dist/index.html
-├── about.jsx          → dist/about.html
-└── blog/
-    └── first-post.jsx → dist/blog/first-post.html
+project/
+├── pages/                 # JSXページ → dist/*.html（ディレクトリ構造を保持）
+│   ├── index.jsx         → dist/index.html
+│   ├── about.jsx         → dist/about.html
+│   └── blog/
+│       └── first-post.jsx → dist/blog/first-post.html
+├── components/           # 再利用可能なコンポーネント（ページから相対パスでimport）
+├── public/               # 静的ファイル（dist/ にそのままコピー）
+├── barrels/              # （任意）バレル生成対象のディレクトリ
+├── uno.config.js         # （任意）UnoCSS設定
+└── dist/                 # 出力先（uno.css もここに生成）
 ```
+
+## Barrels（コンテンツ一覧）
+
+`barrels/<name>/` にJSX/TSXファイルを置くと、ビルド時に `barrels/<name>.js` が自動生成されます（生成物なので `.gitignore` 推奨）。各ファイルの `default` エクスポート（コンポーネント）と `meta` エクスポートがまとめられ、ブログ一覧のようなページを書けます。生成はファイル名だけから行われ、記事の中身はビルド時に評価されません。
+
+```jsx
+// barrels/blog/hello-world.jsx
+export const meta = { title: "Hello World", date: "2025-01-04" };
+export default function HelloWorld() {
+  return <article><h1>{meta.title}</h1></article>;
+}
+```
+
+```jsx
+// pages/blog.jsx
+import { entries, posts } from "../barrels/blog.js";
+
+export default function Blog() {
+  return (
+    <ul>
+      {entries.map((id) => {
+        const { component: Post, meta } = posts[id];
+        return <li><h2>{meta.title}</h2><Post /></li>;
+      })}
+    </ul>
+  );
+}
+```
+
+生成されるバレルは `entries`（ファイル名順のID配列）と `posts`（ID → `{ component, meta }`、`meta` 未定義なら `null`）をエクスポートします。
 
 ## API
 
+CLIを使わずにプログラムから利用する場合：
+
 ```javascript
-// JSXランタイム
-import { createElement } from '@hashrock/ono/jsx-runtime';
+// JSXランタイム（変換後のJSXが呼び出す h / Fragment）
+import { h, Fragment } from "@hashrock/ono";
 
-// レンダラー
-import { renderToString } from '@hashrock/ono';
-const html = renderToString(<div>Hello</div>);
+// レンダラー: VNode → HTML文字列
+import { renderToString } from "@hashrock/ono/renderer";
+const html = renderToString(h("div", null, "Hello"));
 
-// バンドラー
-import { bundle } from '@hashrock/ono';
-const code = await bundle('./path/to/file.jsx');
+// トランスフォーマー: JSX/TS → JS（sucrase）
+import { transformJSX } from "@hashrock/ono/transformer";
 
-// コンテンツコレクション
-import { getCollection } from '@hashrock/ono/content';
-const posts = await getCollection('blog');
+// バンドラー: 仮想ファイルシステム上のモジュールを1本のスクリプトに（Node/ブラウザ共用）
+import { bundle } from "@hashrock/ono/bundler";
+const { code } = await bundle({
+  entry: "index.jsx",
+  load: (id) => files[id],
+  resolve: (specifier, fromId) => /* 相対パスをモジュールIDに解決 */,
+});
+
+// ブラウザ用コンパイラ（REPLが使用）: ファイル群 → { html, css }
+import { compileProject } from "@hashrock/ono/browser/compiler";
 ```
 
 ## 開発
@@ -242,17 +282,17 @@ pnpm --filter @hashrock/ono-repl build
 ### テスト
 
 ```bash
-# ユニットテスト
+# テストを実行（node:test）
 pnpm --filter @hashrock/ono test
 
-# スナップショットテスト
-pnpm --filter @hashrock/ono test:snapshot
+# スナップショット（*.test.js.snapshot）を更新
+pnpm --filter @hashrock/ono test:update
 
-# スナップショットを更新
-pnpm --filter @hashrock/ono test:snapshot:update
+# JSDocベースの型チェック
+pnpm --filter @hashrock/ono typecheck
 ```
 
-スナップショットテストの詳細は[packages/ono/SNAPSHOT_TESTING.md](./packages/ono/SNAPSHOT_TESTING.md)を参照してください。
+`test/golden.test.js` は同じ入力をNodeビルドとブラウザ（REPL）経路の両方で処理し、同一のHTMLになることを検証します。
 
 ## ライセンス
 

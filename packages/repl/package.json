@@ -15,6 +15,7 @@
     "@hashrock/ono": "workspace:*",
     "@unocss/core": "^66.5.4",
     "@unocss/preset-uno": "^66.5.4",
-    "typescript": "^5.9.3"
+    "@unocss/reset": "^66.5.4",
+    "sucrase": "^3.35.1"
   }
 }

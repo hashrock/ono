@@ -50,10 +50,8 @@ describe("Error Handling", () => {
       assert.ok(result.includes("const x = 5"), "should preserve plain JS");
     });
 
-    it("should handle incomplete JSX", () => {
-      // TypeScript auto-closes incomplete JSX
-      const result = transformJSX("const x = <div");
-      assert.ok(typeof result === "string", "should return string");
+    it("should reject incomplete JSX with a syntax error", () => {
+      assert.throws(() => transformJSX("const x = <div"), /input\.jsx/);
     });
   });
 });

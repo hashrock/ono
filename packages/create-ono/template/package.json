@@ -8,6 +8,6 @@
     "build": "ono build"
   },
   "dependencies": {
-    "@hashrock/ono": "^0.2.0"
+    "@hashrock/ono": "^0.3.0"
   }
 }

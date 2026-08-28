@@ -2,7 +2,7 @@
  * Build utilities for Ono SSG
  *
  * Pages are bundled with the browser-compatible mini bundler
- * (bundler.js + parser.js), written to a single temp file, and imported.
+ * (bundler.js), written to a single temp file, and imported.
  * Package (bare) imports are hoisted to the top of the bundle where
  * Node's own resolution handles them.
  */
@@ -11,7 +11,6 @@ import { resolve, join, dirname, basename, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import { renderToString } from "./renderer.js";
 import { generateCSSFromFiles, loadUnoConfig } from "./unocss.js";
-import { transformJSX } from "./transformer.js";
 import { bundle } from "./bundler.js";
 import { getFilesRecursively, isJSXFile, isHTMLFile } from "./utils.js";
 import { DIRS } from "./constants.js";
@@ -32,41 +31,28 @@ let buildCounter = 0;
  * @returns {Promise<string>} Bundled module source
  */
 export async function compileBundle(entryFile) {
-  const { code, entryExports, externalBindings } = await bundle({
+  const { code } = await bundle({
     entry: entryFile,
     resolve: (specifier, fromId) => resolve(dirname(fromId), specifier),
     load: async (id) => {
-      let source;
       try {
-        source = await readFile(id, "utf-8");
+        return await readFile(id, "utf-8");
       } catch (error) {
         throw new Error(`Cannot read file: ${id}\n${error.message}`);
       }
-      return transformJSX(source, id);
     },
   });
 
-  // Provide h/Fragment unless a page pulls in the runtime itself
-  const header =
-    externalBindings.has("h") || externalBindings.has("Fragment") ? "" : JSX_RUNTIME_IMPORT;
-
-  // Re-export the entry's exports so the bundle behaves like the entry module
-  const footer = entryExports
-    .map((name) =>
-      name === "default"
-        ? "export default __ono_entry.default;"
-        : `export const ${name} = __ono_entry[${JSON.stringify(name)}];`,
-    )
-    .join("\n");
-
-  return `${header}${code}\n${footer}\n`;
+  // The entry's export names are not known statically (sucrase rewrites
+  // them to `exports.x` assignments), so expose the whole module object.
+  return `${JSX_RUNTIME_IMPORT}${code}\nexport const __ono_module = __ono_entry;\n`;
 }
 
 /**
  * Bundle a JSX entry file (with its local imports) and import it.
  * A unique temp file per build doubles as ESM cache-busting for rebuilds.
  * @param {string} entryFile - Path to the entry file
- * @returns {Promise<any>} The imported module namespace
+ * @returns {Promise<any>} The entry module's exports object
  */
 export async function importJSXModule(entryFile) {
   const resolvedEntry = resolve(process.cwd(), entryFile);
@@ -76,7 +62,7 @@ export async function importJSXModule(entryFile) {
   await mkdir(dirname(tempFile), { recursive: true });
   await writeFile(tempFile, code);
   try {
-    return await import(pathToFileURL(tempFile).href);
+    return (await import(pathToFileURL(tempFile).href)).__ono_module;
   } finally {
     await rm(tempFile, { force: true });
   }

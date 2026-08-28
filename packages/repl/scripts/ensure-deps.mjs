@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 
 const requiredPaths = [
-  path.join(projectRoot, 'node_modules', 'typescript', 'lib', 'typescript.js'),
+  path.join(projectRoot, 'node_modules', 'sucrase', 'dist', 'index.js'),
   path.join(projectRoot, 'node_modules', '@unocss', 'core', 'dist', 'index.mjs'),
   path.join(projectRoot, 'node_modules', '@unocss', 'preset-uno', 'dist', 'index.mjs'),
 ];

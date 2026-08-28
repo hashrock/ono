@@ -1,0 +1,39 @@
+exports[`golden - attributes - class/className, data/aria, boolean, spread, style, template 1`] = `
+<form><input type="checkbox" disabled checked /><div class="a" data-count="3" aria-hidden="true"></div><div class="b" style="margin-top: 1em; font-size: 12; --custom: 1px"></div><div id="from-spread" class="explicit-wins" data-x="1"></div><div class="spread-class" id="from-spread" data-x="1"></div><a href="/items/3?q=a&amp;b">link</a><svg><use href="#icon" xlink:href="#icon"></use></svg></form>
+`;
+
+exports[`golden - elements - components, member expressions, fragments 1`] = `
+<div><button class="btn-primary">OK</button><ul><li>a</li><li>b</li></ul>nested fragment</div>
+`;
+
+exports[`golden - entities - decoded in text and attributes 1`] = `
+<p title="a &amp; b &quot;q&quot;">nbsp:[ ] copy:© lt:&lt;tag&gt; amp:&amp; quote:&quot;raw&quot;</p>
+`;
+
+exports[`golden - expressions - conditionals, map, comments, falsy children 1`] = `
+<div><p>no</p><span>0</span><span></span><ol><li data-id="1">one</li><li data-id="2">two</li></ol></div>
+`;
+
+exports[`golden - javascript - modern syntax passes through 1`] = `
+<div><p>counter:0</p><p>fallback</p><p>&quot;hi&quot;|&#039;bye&#039;</p><p>outer inner \`tick\` done</p><p>1,4,9</p></div>
+`;
+
+exports[`golden - modules - components dir, barrel re-exports, default aliases 1`] = `
+<div class="card"><h2>v1</h2><button>Go</button><span>inner 2</span><span>outer 1</span></div>
+`;
+
+exports[`golden - modules - cyclic imports between components 1`] = `
+<div class="a"><div class="b"><div class="a">leaf</div></div></div>
+`;
+
+exports[`golden - typescript - .ts/.tsx modules with types are stripped 1`] = `
+<main><section class="card"><h2>Typed</h2><em>a</em><em>b</em></section><p>Typed</p></main>
+`;
+
+exports[`golden - unicode - japanese, emoji, script content 1`] = `
+<div><h1>こんにちは、世界 🌏🚀</h1><p>絵文字: 👨‍👩‍👧‍👦 とサロゲートペア: 𠮷野家</p><script>const x = {&quot;msg&quot;:&quot;&lt;/script&gt;&quot;,&quot;ja&quot;:&quot;日本語&quot;};</script></div>
+`;
+
+exports[`golden - whitespace - multi-line text, explicit space, inline elements 1`] = `
+<p>Leading and trailing newlines are trimmed, but   inner   spaces   stay.<b>bold</b> <i>italic</i> after explicit space</p>
+`;
