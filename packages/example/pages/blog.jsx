@@ -1,5 +1,5 @@
 import Layout from "../components/Layout.jsx";
-import { entries, posts } from "../barrels/blog.ts";
+import { entries, posts } from "../barrels/blog.js";
 
 function Blog() {
   return (

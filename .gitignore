@@ -87,7 +87,7 @@ dist
 .ono/
 
 # Generated barrel files in the example
-packages/example/barrels/*.ts
+packages/example/barrels/*.js
 
 # Gatsby files
 .cache/
