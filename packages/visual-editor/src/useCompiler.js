@@ -46,7 +46,7 @@ export function useCompiler(entryPoint) {
       }
       workerRef.current?.postMessage({ type: 'compile', files: instrumented, entryPoint, id });
     };
-    const debounced = debounce(compile, 400);
+    const debounced = debounce(compile, 200);
     compileRef.current = {
       compileNow: (files) => {
         debounced.cancel();

@@ -274,7 +274,7 @@ function runCode() {
   });
 }
 
-scheduleCompile = debounce(runCode, 400);
+scheduleCompile = debounce(runCode, 200);
 
 // Load example
 function loadExample(name) {
