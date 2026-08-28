@@ -1,6 +1,6 @@
 {
   "name": "@hashrock/ono",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Minimalist SSG framework with JSX, powered by sucrase",
   "type": "module",
   "main": "src/jsx-runtime.js",
