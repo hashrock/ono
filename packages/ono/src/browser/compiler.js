@@ -1,13 +1,12 @@
 /**
  * Browser compiler - shared with the REPL worker.
  *
- * Uses the same mini bundler as the Node build (bundler.js/parser.js).
+ * Uses the same mini bundler as the Node build (bundler.js).
  * Package imports are rejected — the browser has no module resolution —
  * and the bundle is evaluated with new Function, with the JSX runtime
  * passed in as parameters.
  */
 
-import { transformJSX } from '../transformer.js';
 import { renderToString } from '../renderer.js';
 import { h, Fragment } from '../jsx-runtime.js';
 import { bundle } from '../bundler.js';
@@ -53,7 +52,7 @@ async function bundleProject(files, entryPoint) {
       }
       return resolved;
     },
-    load: (id) => transformJSX(files[id], id),
+    load: (id) => files[id],
     onExternal: 'error',
     exposeEntryFunctions: true,
   });

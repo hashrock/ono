@@ -142,7 +142,7 @@ function App() {
     <Layout title="My Blog">
       <Post title="Getting Started with Ono" date="2025-10-28">
         <p>
-          Ono is a minimalist SSG framework with JSX, powered by TypeScript's JSX transformer.
+          Ono is a minimalist SSG framework with JSX, powered by sucrase.
           UnoCSS keeps the styles atomic and fast, even in the browser.
         </p>
         <p>

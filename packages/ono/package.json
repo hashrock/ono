@@ -1,7 +1,7 @@
 {
   "name": "@hashrock/ono",
   "version": "0.2.0",
-  "description": "Minimalist SSG framework with JSX, powered by TypeScript's JSX transformer",
+  "description": "Minimalist SSG framework with JSX, powered by sucrase",
   "type": "module",
   "main": "src/jsx-runtime.js",
   "exports": {
@@ -9,7 +9,6 @@
     "./jsx-runtime": "./src/jsx-runtime.js",
     "./renderer": "./src/renderer.js",
     "./transformer": "./src/transformer.js",
-    "./parser": "./src/parser.js",
     "./bundler": "./src/bundler.js",
     "./barrels": "./src/barrels.js",
     "./browser/compiler": "./src/browser/compiler.js",
@@ -55,6 +54,7 @@
     "@unocss/core": "^66.5.4",
     "@unocss/preset-uno": "^66.5.4",
     "@unocss/reset": "^66.5.4",
+    "sucrase": "^3.35.1",
     "typescript": "^5.9.3"
   },
   "devDependencies": {

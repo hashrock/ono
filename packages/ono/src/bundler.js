@@ -1,57 +1,41 @@
-// @ts-nocheck — consumes the parser's anonymous-tuple combinator results;
-// checkJs adds noise here without catching real bugs (see parser.js).
 /**
  * Mini bundler - browser-compatible.
  *
- * Each module is wrapped in a factory function and linked with a tiny
- * lazy require(), so no topological sort is needed and import cycles
- * behave like CommonJS. Module syntax is parsed with the parser
- * combinators in parser.js — no regular expressions over source code.
+ * Each module is transformed to CommonJS-style code by sucrase (JSX plus
+ * import/export rewriting), wrapped in a factory function, and linked with
+ * a tiny lazy require(). No topological sort is needed and import cycles
+ * behave like CommonJS.
  *
  * The host environment supplies I/O:
- *   - load(id): return the module's JavaScript source (JSX already transformed)
+ *   - load(id): return the module's source (JSX/TS allowed)
  *   - resolve(specifier, fromId): turn a relative specifier into a module id
  *
- * Known limitations (deliberate, for simplicity): no top-level await,
- * no destructuring in exported declarations, `export *` copies a
- * snapshot of the source module.
+ * Known limitation (deliberate, for simplicity): no top-level await.
  */
-import { parseModule, isIdentifierName } from "./parser.js";
+import { transformModule } from "./transformer.js";
 
+/** @param {string} specifier */
 const isRelative = (specifier) =>
   specifier.startsWith("./") || specifier.startsWith("../") || specifier.startsWith("/");
 
-/** Apply text replacements (non-overlapping) to a source string */
-function applyEdits(source, edits) {
-  let result = source;
-  for (const edit of [...edits].sort((a, b) => b.start - a.start)) {
-    result = result.slice(0, edit.start) + edit.text + result.slice(edit.end);
-  }
-  return result;
-}
+/**
+ * `require('...')` calls emitted by sucrase's imports transform. Only the
+ * transformed output is scanned, so import statements are already gone;
+ * a string literal in user code that happens to look like a require call
+ * will also be picked up, which at worst loads an extra module.
+ */
+const REQUIRE_CALL = /\brequire\((["'])([^"'\\\n]+)\1\)/g;
 
-/** Generate the require/destructuring lines that replace an import statement */
-function importReplacement(imp, requireCall) {
-  const parts = [];
-  if (imp.defaultBinding) parts.push(`const ${imp.defaultBinding} = ${requireCall}.default;`);
-  if (imp.namespace) parts.push(`const ${imp.namespace} = ${requireCall};`);
-  if (imp.named && imp.named.length > 0) {
-    const bindings = imp.named
-      .map(({ imported, local }) =>
-        imported === local ? imported : `${JSON.stringify(imported)}: ${local}`,
-      )
-      .join(", ");
-    parts.push(`const { ${bindings} } = ${requireCall};`);
-  }
-  if (parts.length === 0) parts.push(`${requireCall};`); // side-effect only
-  return parts.join(" ");
-}
-
-/** Record the top-level names an import statement binds */
-function collectBindings(imp, bindings) {
-  if (imp.defaultBinding) bindings.add(imp.defaultBinding);
-  if (imp.namespace) bindings.add(imp.namespace);
-  for (const { local } of imp.named ?? []) bindings.add(local);
+/**
+ * REPL convenience: a snippet without any `export` still renders its
+ * top-level functions (usually ending in an App function).
+ * @param {string} source
+ */
+function exposeTopLevelFunctions(source) {
+  if (/^\s*export\b/m.test(source)) return source;
+  const names = [...source.matchAll(/^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]);
+  if (names.length === 0) return source;
+  return `${source}\nexport { ${[...new Set(names)].join(", ")} };`;
 }
 
 const LINKER_RUNTIME = `const __ono_cache = new Map();
@@ -60,14 +44,11 @@ function __ono_require(id) {
   if (!record) {
     record = { exports: {} };
     __ono_cache.set(id, record);
-    __ono_modules[id](record.exports, __ono_require);
+    const { deps, factory } = __ono_modules[id];
+    factory(record.exports, (specifier) =>
+      specifier in deps ? __ono_require(deps[specifier]) : __ono_externals[specifier]);
   }
   return record.exports;
-}
-function __ono_export_star(target, source) {
-  for (const key of Object.keys(source)) {
-    if (key !== "default") target[key] = source[key];
-  }
 }`;
 
 /**
@@ -75,158 +56,69 @@ function __ono_export_star(target, source) {
  *
  * @param {Object} options
  * @param {string} options.entry - Module id of the entry point
- * @param {(id: string) => string | Promise<string>} options.load - Return a module's JS source
+ * @param {(id: string) => string | Promise<string>} options.load - Return a module's source
  * @param {(specifier: string, fromId: string) => string} options.resolve - Resolve a relative specifier
- * @param {"hoist"|"error"} [options.onExternal] - Bare (package) imports: hoist to the
- *   bundle top (needs an ESM host, e.g. Node) or throw (e.g. the browser REPL)
- * @param {boolean} [options.exposeEntryFunctions] - Also export the entry's top-level
- *   function declarations (REPL convenience for code without exports)
- * @returns {Promise<{code: string, entryId: string, entryExports: string[], externalBindings: Set<string>}>}
- *   `code` defines __ono_modules/__ono_require and ends by evaluating the
- *   entry into `__ono_entry`. The caller decides how to expose it.
+ * @param {"hoist"|"error"} [options.onExternal] - Bare (package) imports: hoist to ES
+ *   `import` statements at the bundle top (needs an ESM host, e.g. Node) or throw (browser)
+ * @param {boolean} [options.exposeEntryFunctions] - Export the entry's top-level functions
+ *   when it has no exports of its own (REPL convenience)
+ * @returns {Promise<{code: string, entryId: string, externals: string[]}>}
+ *   `code` ends by evaluating the entry into `__ono_entry`; it references
+ *   `h` and `Fragment` as free variables the caller must provide.
  */
 export async function bundle(options) {
   const { entry, load, resolve, onExternal = "hoist", exposeEntryFunctions = false } = options;
 
-  const moduleCodes = new Map();
-  const externalImports = [];
-  const externalBindings = new Set();
-  const entryExports = [];
-  const addEntryExport = (name) => {
-    if (!entryExports.includes(name)) entryExports.push(name);
-  };
+  /** @type {Map<string, {code: string, deps: Record<string, string>}>} */
+  const modules = new Map();
+  /** @type {string[]} */
+  const externals = [];
 
   const queue = [entry];
   while (queue.length > 0) {
-    const id = queue.shift();
-    if (moduleCodes.has(id)) continue;
+    const id = /** @type {string} */ (queue.shift());
+    if (modules.has(id)) continue;
 
-    const source = await load(id);
-    let parsed;
-    try {
-      parsed = parseModule(source);
-    } catch (error) {
-      throw new Error(`${error.message} (in ${id})`);
-    }
+    let source = await load(id);
+    if (exposeEntryFunctions && id === entry) source = exposeTopLevelFunctions(source);
+    const code = transformModule(source, id);
 
-    const isEntry = id === entry;
-    const edits = [];
-    // Function declarations are hoisted, so their export assignments go at
-    // the top of the factory — this keeps them visible across import cycles,
-    // mirroring ESM hoisting. Everything else is assigned at the end.
-    const head = [];
-    const tail = [];
-
-    for (const imp of parsed.imports) {
-      if (isRelative(imp.specifier)) {
-        const depId = resolve(imp.specifier, id);
-        queue.push(depId);
-        const requireCall = `__ono_require(${JSON.stringify(depId)})`;
-        edits.push({ start: imp.start, end: imp.end, text: importReplacement(imp, requireCall) });
+    /** @type {Record<string, string>} */
+    const deps = {};
+    for (const [, , specifier] of code.matchAll(REQUIRE_CALL)) {
+      if (isRelative(specifier)) {
+        deps[specifier] = resolve(specifier, id);
+        queue.push(deps[specifier]);
       } else if (onExternal === "hoist") {
-        // Package import: move it to the top of the bundle, outside the factories
-        const statement = source.slice(imp.start, imp.end).trim();
-        if (!externalImports.includes(statement)) externalImports.push(statement);
-        collectBindings(imp, externalBindings);
-        edits.push({ start: imp.start, end: imp.end, text: "" });
+        if (!externals.includes(specifier)) externals.push(specifier);
       } else {
-        throw new Error(`Cannot bundle package import "${imp.specifier}" (in ${id})`);
+        throw new Error(`Cannot bundle package import "${specifier}" (in ${id})`);
       }
     }
-
-    for (const exp of parsed.exports) {
-      switch (exp.type) {
-        case "exportStarFrom": {
-          if (!isRelative(exp.specifier)) {
-            throw new Error(`"export * from" a package is not supported (in ${id})`);
-          }
-          const depId = resolve(exp.specifier, id);
-          queue.push(depId);
-          const requireCall = `__ono_require(${JSON.stringify(depId)})`;
-          const text = exp.alias
-            ? `__ono_exports[${JSON.stringify(exp.alias)}] = ${requireCall};`
-            : `__ono_export_star(__ono_exports, ${requireCall});`;
-          edits.push({ start: exp.start, end: exp.end, text });
-          if (isEntry && exp.alias) addEntryExport(exp.alias);
-          break;
-        }
-        case "exportNamedFrom": {
-          if (!isRelative(exp.specifier)) {
-            throw new Error(`Re-exporting from a package is not supported (in ${id})`);
-          }
-          const depId = resolve(exp.specifier, id);
-          queue.push(depId);
-          const requireCall = `__ono_require(${JSON.stringify(depId)})`;
-          const text = exp.named
-            .map(
-              ({ local, exported }) =>
-                `__ono_exports[${JSON.stringify(exported)}] = ${requireCall}[${JSON.stringify(local)}];`,
-            )
-            .join(" ");
-          edits.push({ start: exp.start, end: exp.end, text });
-          if (isEntry) exp.named.forEach(({ exported }) => addEntryExport(exported));
-          break;
-        }
-        case "exportNamed": {
-          edits.push({ start: exp.start, end: exp.end, text: "" });
-          for (const { local, exported } of exp.named) {
-            tail.push(`__ono_exports[${JSON.stringify(exported)}] = ${local};`);
-            if (isEntry) addEntryExport(exported);
-          }
-          break;
-        }
-        case "exportDefaultDeclaration": {
-          edits.push({ start: exp.start, end: exp.headerEnd, text: "" });
-          const target = exp.declarationKind === "function" ? head : tail;
-          target.push(`__ono_exports.default = ${exp.name};`);
-          if (isEntry) addEntryExport("default");
-          break;
-        }
-        case "exportDefaultExpression": {
-          edits.push({ start: exp.start, end: exp.headerEnd, text: "__ono_exports.default =" });
-          if (isEntry) addEntryExport("default");
-          break;
-        }
-        case "exportDeclaration": {
-          edits.push({ start: exp.start, end: exp.headerEnd, text: "" });
-          const target = exp.declarationKind === "function" ? head : tail;
-          for (const name of exp.names) {
-            target.push(`__ono_exports[${JSON.stringify(name)}] = ${name};`);
-            if (isEntry) addEntryExport(name);
-          }
-          break;
-        }
-      }
-    }
-
-    if (exposeEntryFunctions && isEntry) {
-      for (const name of parsed.topLevelFunctions) {
-        if (!entryExports.includes(name)) {
-          tail.push(`__ono_exports[${JSON.stringify(name)}] = ${name};`);
-          addEntryExport(name);
-        }
-      }
-    }
-
-    let code = applyEdits(source, edits);
-    if (head.length > 0) code = `${head.join("\n")}\n${code}`;
-    if (tail.length > 0) code += `\n${tail.join("\n")}`;
-    moduleCodes.set(id, code);
+    modules.set(id, { code, deps });
   }
 
   const parts = [];
-  if (externalImports.length > 0) parts.push(externalImports.join("\n"));
+  if (externals.length > 0) {
+    // Package imports become real ES imports; wrap namespaces so sucrase's
+    // interop helpers treat them as ES modules (default stays `default`).
+    parts.push(externals.map((s, i) => `import * as __ono_ext${i} from ${JSON.stringify(s)};`).join("\n"));
+    parts.push(
+      `const __ono_externals = {\n${externals
+        .map((s, i) => `  ${JSON.stringify(s)}: { __esModule: true, ...__ono_ext${i} }`)
+        .join(",\n")}\n};`,
+    );
+  } else {
+    parts.push("const __ono_externals = {};");
+  }
   parts.push("const __ono_modules = {};");
-  for (const [id, code] of moduleCodes) {
-    parts.push(`__ono_modules[${JSON.stringify(id)}] = function (__ono_exports, __ono_require) {\n${code}\n};`);
+  for (const [id, { code, deps }] of modules) {
+    parts.push(
+      `__ono_modules[${JSON.stringify(id)}] = { deps: ${JSON.stringify(deps)}, factory: function (exports, require) {\n${code}\n} };`,
+    );
   }
   parts.push(LINKER_RUNTIME);
   parts.push(`const __ono_entry = __ono_require(${JSON.stringify(entry)});`);
 
-  return {
-    code: parts.join("\n\n"),
-    entryId: entry,
-    entryExports: entryExports.filter((name) => name === "default" || isIdentifierName(name)),
-    externalBindings,
-  };
+  return { code: parts.join("\n\n"), entryId: entry, externals };
 }
