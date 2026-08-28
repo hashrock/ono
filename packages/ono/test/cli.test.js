@@ -4,6 +4,7 @@
  * Update snapshots with: npm run test:update
  */
 import { test, beforeEach, afterEach } from "node:test";
+import assert from "node:assert";
 import { spawn } from "node:child_process";
 import { mkdir, rm } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
@@ -97,4 +98,66 @@ test("cli - build non-existent file", async (t) => {
 
 test("cli - build non-existent directory", async (t) => {
   t.assert.snapshot(formatResult(await runCLI(["build", "non-existent-dir"])), raw);
+});
+
+// --- End-to-end: build real projects ------------------------------------------
+
+import { cp, readFile, readdir } from "node:fs/promises";
+
+/** Recursively list files under dir, sorted, as relative posix paths */
+async function listFiles(dir, prefix = "") {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const out = [];
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) out.push(...(await listFiles(resolve(dir, entry.name), rel)));
+    else out.push(rel);
+  }
+  return out;
+}
+
+/** Copy a project into TEST_DIR (without node_modules / build output) and run `ono build` */
+async function buildProject(sourceDir) {
+  await cp(sourceDir, TEST_DIR, {
+    recursive: true,
+    filter: (src) => !/node_modules|\/dist(\/|$)|\.ono/.test(src),
+  });
+  const result = await runCLI(["build"]);
+  assert.strictEqual(result.code, 0, `build failed:\n${result.stderr}`);
+  return {
+    ...result,
+    files: await listFiles(resolve(TEST_DIR, "dist")),
+    read: (file) => readFile(resolve(TEST_DIR, "dist", file), "utf-8"),
+  };
+}
+
+test("cli e2e - example project builds pages, barrels, public and uno.css", async (t) => {
+  const built = await buildProject(resolve(__dirname, "../../example"));
+  t.assert.snapshot(built.files.join("\n"), raw);
+
+  const blog = await built.read("blog.html");
+  assert.ok(blog.includes("Hello World"), "barrel entry is rendered into blog page");
+  assert.ok(blog.includes("2025-01-04"), "barrel meta is available to the page");
+
+  const css = await built.read("uno.css");
+  assert.ok(css.includes("#0ea5e9") || css.includes("14 165 233"), "uno.config.js theme color is applied");
+  assert.ok(/\.btn-primary/.test(css), "uno.config.js shortcuts are applied");
+  assert.ok(!built.stdout.includes("Warning"), `no warnings:\n${built.stdout}`);
+});
+
+test("cli e2e - create-ono template builds", async (t) => {
+  const built = await buildProject(resolve(__dirname, "../../create-ono/template"));
+  t.assert.snapshot(built.files.join("\n"), raw);
+
+  const index = await built.read("index.html");
+  assert.ok(index.includes("Welcome to Ono!"));
+  assert.ok(index.includes("<title>My Ono Site</title>"));
+});
+
+test("cli e2e - rebuilding twice yields identical output", async () => {
+  const first = await buildProject(resolve(__dirname, "../../create-ono/template"));
+  const html1 = await first.read("index.html");
+  const second = await runCLI(["build"]);
+  assert.strictEqual(second.code, 0);
+  assert.strictEqual(await first.read("index.html"), html1);
 });

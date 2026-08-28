@@ -31,12 +31,14 @@ test("importJSXModule - rejects on non-existent file", async () => {
   );
 });
 
-test("importJSXModule - cleans up its temp directory", async () => {
+test("importJSXModule - cleans up its temp file", async () => {
+  // Other test files share the same .ono dir concurrently, so only check
+  // that this process's own build files are gone.
   await importJSXModule(path.join(fixturesDir, "App.jsx"));
   const tempDir = path.join(process.cwd(), ".ono");
   if (existsSync(tempDir)) {
     const { readdir } = await import("node:fs/promises");
-    const leftovers = await readdir(tempDir);
+    const leftovers = (await readdir(tempDir)).filter((f) => f.startsWith(`build-${process.pid}-`));
     assert.deepStrictEqual(leftovers, []);
   }
 });
