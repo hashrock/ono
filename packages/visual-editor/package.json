@@ -1,0 +1,26 @@
+{
+  "name": "@hashrock/ono-visual-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal visual web editor (Vite + React): edit JSX, render it with Ono, tweak elements from the preview",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "vite": "^7.1.12",
+    "@vitejs/plugin-react": "^5.1.0"
+  },
+  "dependencies": {
+    "@hashrock/ono": "workspace:*",
+    "@unocss/core": "^66.5.4",
+    "@unocss/preset-uno": "^66.5.4",
+    "@unocss/reset": "^66.5.4",
+    "sucrase": "^3.35.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}

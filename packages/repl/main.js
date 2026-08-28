@@ -1,4 +1,6 @@
 // Multi-file REPL logic
+import { debounce, injectHead } from '@ono/browser/playground.js';
+
 const preview = document.getElementById('preview');
 const status = document.getElementById('status');
 const runBtn = document.getElementById('runBtn');
@@ -16,18 +18,6 @@ const worker = new Worker(new URL('./compiler.worker.js', import.meta.url), {
 
 let currentRequestId = 0;
 let scheduleCompile;
-
-function debounce(fn, delay = 300) {
-  let timer;
-  function debounced(...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  }
-  debounced.cancel = () => {
-    clearTimeout(timer);
-  };
-  return debounced;
-}
 
 // Example projects
 const examples = {
@@ -242,31 +232,7 @@ function renderPreview(html, css) {
 
 function integrateUnoCSS(html, css) {
   const trimmedCSS = (css || '').trim();
-  if (!trimmedCSS) {
-    return normalizeHtml(html);
-  }
-
-  const styleTag = `<style id="uno-css">${trimmedCSS}</style>`;
-
-  if (!/<html[\s>]/i.test(html)) {
-    return `<!DOCTYPE html><html><head><meta charset="utf-8">${styleTag}</head><body>${html}</body></html>`;
-  }
-
-  if (/<head[\s>]/i.test(html)) {
-    if (/<\/head>/i.test(html)) {
-      return html.replace(/<\/head>/i, `${styleTag}</head>`);
-    }
-    return html.replace(/<head([^>]*)>/i, `<head$1>${styleTag}`);
-  }
-
-  return html.replace(/<html([^>]*)>/i, `<html$1><head>${styleTag}</head>`);
-}
-
-function normalizeHtml(html) {
-  if (/<html[\s>]/i.test(html)) {
-    return html;
-  }
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`;
+  return injectHead(html, trimmedCSS ? `<style id="uno-css">${trimmedCSS}</style>` : '');
 }
 
 function handleEditorKeydown(e) {
