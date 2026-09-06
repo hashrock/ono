@@ -1,5 +1,5 @@
 // Compiles the (instrumented) project with Ono's browser compiler.
-import { compileProject } from '@ono/browser/compiler.js';
+import { compileProject } from '@hashrock/ono/browser/compiler';
 import resetCSS from '@unocss/reset/tailwind.css?raw';
 
 self.onmessage = async (event) => {

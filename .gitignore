@@ -86,6 +86,9 @@ dist
 # Ono per-build temp directory
 .ono/
 
+# Visual editor demo build
+packages/visual-editor/demo-dist/
+
 # Generated barrel files in the example
 packages/example/barrels/*.js
 

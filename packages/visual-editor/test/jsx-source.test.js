@@ -12,7 +12,7 @@ import {
   moveElementTo,
   insertSnippet,
   isWithin,
-} from '../jsx-source.js';
+} from '../src/jsx-source.js';
 
 const src = `export function App() {
   return (

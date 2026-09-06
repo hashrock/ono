@@ -9,7 +9,7 @@ import {
   parseColor,
   colorClass,
   swatchColor,
-} from '../../uno-controls.js';
+} from '../uno-controls.js';
 import { CommitInput } from './CommitInput.jsx';
 
 /**

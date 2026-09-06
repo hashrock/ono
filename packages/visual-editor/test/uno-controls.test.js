@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GROUPS, classList, readValue, writeValue, parseColor, colorClass } from '../uno-controls.js';
+import { GROUPS, classList, readValue, writeValue, parseColor, colorClass } from '../src/uno-controls.js';
 
 const find = (label, group) =>
   GROUPS.find((g) => g.title === group).controls.find((c) => c.label === label);

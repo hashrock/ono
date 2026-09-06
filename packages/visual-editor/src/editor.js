@@ -7,7 +7,7 @@
  * parseElements' output). The selection additionally carries `nth`, the DOM
  * instance to outline when a component is rendered several times.
  */
-import { parseElements, setAttr, setText, removeElement, duplicateElement, moveElementTo, insertSnippet } from '../jsx-source.js';
+import { parseElements, setAttr, setText, removeElement, duplicateElement, moveElementTo, insertSnippet } from './jsx-source.js';
 
 /** Parse cache keyed by filename; a file is re-parsed only when its source changed. */
 const parsed = new Map();
