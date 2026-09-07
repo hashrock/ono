@@ -1,20 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { debounce } from '@hashrock/ono/browser/playground';
-import { instrument } from '../jsx-source.js';
+import { instrument } from './jsx-source.js';
+// Inlined so the library ships one file: consumers need no worker/bundler setup.
+import CompilerWorker from './compiler.worker.js?worker&inline';
 
 /**
  * Owns the compiler Web Worker. `compile(files)` instruments every file and
  * posts it; stale responses (older request ids) are ignored.
  * Returns the latest { html, css } and a status line.
+ * @param {string} entryPoint
+ * @param {(() => Worker)} [createWorker] replaces the bundled compiler worker
  */
-export function useCompiler(entryPoint) {
+export function useCompiler(entryPoint, createWorker) {
   const workerRef = useRef(null);
   const requestId = useRef(0);
   const [status, setStatus] = useState({ text: 'Ready', kind: '' });
   const [output, setOutput] = useState(null);
 
+  const factory = useRef(createWorker);
+  factory.current = createWorker;
+
   useEffect(() => {
-    const worker = new Worker(new URL('../compiler.worker.js', import.meta.url), { type: 'module' });
+    const worker = factory.current ? factory.current() : new CompilerWorker();
     worker.onmessage = (e) => {
       const { type, html, css, error, stack, id, fileCount } = e.data;
       if (id !== requestId.current) return;

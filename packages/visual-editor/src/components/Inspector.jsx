@@ -1,5 +1,5 @@
-import { CLASS_ATTRS, findAttr, getText } from '../../jsx-source.js';
-import { classList } from '../../uno-controls.js';
+import { CLASS_ATTRS, findAttr, getText } from '../jsx-source.js';
+import { classList } from '../uno-controls.js';
 import { targetId } from '../editor.js';
 import { ClassEditor } from './ClassEditor.jsx';
 import { CommitInput } from './CommitInput.jsx';

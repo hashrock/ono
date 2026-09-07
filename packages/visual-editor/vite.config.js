@@ -1,24 +1,28 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { alias } from './vite.shared.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
+/**
+ * Library build: `dist/index.js` (React component), `dist/core.js` (headless
+ * logic) and `dist/style.css`.
+ *
+ * React, Ono and sucrase stay external — consumers install them. The compiler
+ * Web Worker is inlined instead (see useCompiler.js), so the editor needs no
+ * worker or asset configuration on the consumer side.
+ */
 export default defineConfig({
-  base: './',
   plugins: [react()],
-  resolve: {
-    alias: {
-      '@ono': path.resolve(__dirname, '../ono/src'),
-      '@unocss/core': path.resolve(__dirname, 'node_modules/@unocss/core/dist/index.mjs'),
-      '@unocss/preset-uno': path.resolve(__dirname, 'node_modules/@unocss/preset-uno/dist/index.mjs'),
-    },
-  },
+  resolve: { alias },
   build: {
-    outDir: 'dist',
+    target: 'es2022',
+    cssCodeSplit: false,
+    lib: {
+      entry: { index: 'src/index.js', core: 'src/core.js' },
+      formats: ['es'],
+    },
     rollupOptions: {
-      output: { manualChunks: undefined },
+      external: [/^react($|\/)/, /^react-dom($|\/)/, /^@hashrock\/ono($|\/)/, /^sucrase($|\/)/],
+      output: { assetFileNames: 'style.[ext]' },
     },
   },
 });

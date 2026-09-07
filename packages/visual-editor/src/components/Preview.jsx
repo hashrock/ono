@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { injectHead } from '@hashrock/ono/browser/playground';
-import { ID_ATTR } from '../../jsx-source.js';
+import { ID_ATTR } from '../jsx-source.js';
 import { SNIPPET_MIME } from './Palette.jsx';
 
 const OVERLAY_CSS = `
@@ -191,5 +191,5 @@ export function Preview({ output, selection, selectMode, onSelect, onShortcut, o
     instances[Math.min(selection.nth, instances.length - 1)].setAttribute('data-ono-selected', '');
   }, [output, selection]);
 
-  return <iframe id="preview" ref={iframeRef} title="preview" />;
+  return <iframe className="preview" ref={iframeRef} title="preview" />;
 }

@@ -1,12 +1,11 @@
-import { snippets } from '../example.js';
-
 export const SNIPPET_MIME = 'application/x-ono-snippet';
 
 /**
  * Insert palette: drag a tile into the preview to drop it before/after an
  * element, or click it to insert after the selected element.
+ * @param {{ snippets: import('../snippets.js').Snippet[], canClick: boolean, onInsert: (code: string) => void }} props
  */
-export function Palette({ canClick, onInsert }) {
+export function Palette({ snippets, canClick, onInsert }) {
   return (
     <div className="palette">
       {snippets.map(({ label, icon, code }) => (

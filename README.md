@@ -22,7 +22,7 @@ OnoはAstroのミニマルな代替として設計されており、軽量なJSX
 | [@hashrock/ono](./packages/ono) | CLIを備えたコアSSGフレームワーク | [![npm](https://img.shields.io/npm/v/@hashrock/ono)](https://www.npmjs.com/package/@hashrock/ono) |
 | [create-ono](./packages/create-ono) | プロジェクトスキャフォールディングツール | [![npm](https://img.shields.io/npm/v/create-ono)](https://www.npmjs.com/package/create-ono) |
 | [@hashrock/ono-repl](./packages/repl) | ブラウザベースのREPLプレイグラウンド | - |
-| [@hashrock/ono-visual-editor](./packages/visual-editor) | JSXをOnoでレンダリングし、プレビューから要素を編集できる簡易ビジュアルエディタ（Vite + React） | - |
+| [@hashrock/ono-visual-editor](./packages/visual-editor) | ビジュアルエディタのReactコンポーネント（プレビューから要素を編集し、JSXソースを書き換える） | - |
 
 ## クイックスタート
 
@@ -278,6 +278,12 @@ pnpm --filter @hashrock/ono-repl dev
 
 # REPLをビルド
 pnpm --filter @hashrock/ono-repl build
+
+# ビジュアルエディタのデモを起動（ライブラリ本体は src/ をHMRで読み込み）
+pnpm --filter @hashrock/ono-visual-editor dev
+
+# ビジュアルエディタをライブラリとしてビルド（dist/）
+pnpm --filter @hashrock/ono-visual-editor build
 ```
 
 ### テスト
