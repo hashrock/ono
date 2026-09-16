@@ -35,21 +35,7 @@ function ButtonRow({ title, buttons }) {
  *           dispatch: (action: any) => void }} props
  */
 export function Inspector({ selected, dispatch }) {
-  if (!selected) {
-    return (
-      <p className="empty">
-        Nothing selected.
-        <br />
-        Click an element in the preview to inspect it.
-        <br />
-        <br />
-        Drag an element to move it. Drag a palette tile into the preview to insert it.
-        <br />
-        <br />
-        Shortcuts: <b>⌘/Ctrl+Z</b> undo, <b>⌘/Ctrl+Shift+Z</b> / <b>⌘/Ctrl+Y</b> redo, <b>Delete</b> remove, <b>⌘/Ctrl+D</b> duplicate, <b>Esc</b> deselect (not while typing in a text field).
-      </p>
-    );
-  }
+  if (!selected) return null;
 
   const { target, filename, source, element, nth, instanceCount } = selected;
   const command = (action) => dispatch({ ...action, target });
@@ -60,11 +46,17 @@ export function Inspector({ selected, dispatch }) {
 
   return (
     <>
-      <div>
-        <div className="selected-tag">{`<${element.tag}>`}</div>
-        <div className="selected-file">
-          {filename}:{line}
+      <div className="inspector-head">
+        <div>
+          <div className="selected-tag">{`<${element.tag}>`}</div>
+          <div className="selected-file">
+            {filename}:{line}
+          </div>
         </div>
+        <span className="spacer" />
+        <button className="icon" title="Deselect (Esc)" onClick={() => dispatch({ type: 'select', selection: null })}>
+          ×
+        </button>
       </div>
       {instanceCount > 1 && (
         <div className="hint">

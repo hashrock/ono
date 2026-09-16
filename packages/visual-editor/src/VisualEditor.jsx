@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { ID_ATTR, splitId } from './jsx-source.js';
 import { EXAMPLE_ENTRY, EXAMPLE_FILES } from './example.js';
 import { DEFAULT_SNIPPETS } from './snippets.js';
@@ -9,6 +9,22 @@ import { Preview, instancesOf } from './components/Preview.jsx';
 import { Inspector } from './components/Inspector.jsx';
 import { Palette } from './components/Palette.jsx';
 import './styles.css';
+
+const VIEWS = [
+  { key: 'design', label: 'Design' },
+  { key: 'preview', label: 'Preview' },
+  { key: 'code', label: 'Code' },
+];
+
+/** Curved-arrow icon for undo; `mirrored` flips it for redo. */
+function ArrowIcon({ mirrored = false }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={mirrored ? { transform: 'scaleX(-1)' } : undefined}>
+      <path d="M5.5 3.5 2.5 6.5l3 3" />
+      <path d="M2.5 6.5h7a4 4 0 0 1 0 8H7" />
+    </svg>
+  );
+}
 
 /**
  * The visual editor as a single React component.
@@ -27,11 +43,11 @@ import './styles.css';
  * @param {(selection: { filename: string, index: number, tag: string } | null) => void} [props.onSelect] Called when the selected element changes.
  * @param {import('./snippets.js').Snippet[]} [props.snippets] Insert palette. Defaults to `DEFAULT_SNIPPETS`.
  * @param {() => Worker} [props.createWorker] Compiler worker factory. Defaults to the bundled Ono compiler worker.
- * @param {boolean} [props.header] Show the toolbar row. Default `true`.
- * @param {import('react').ReactNode} [props.title] Toolbar title. Default `'Ono Visual Editor'`.
- * @param {import('react').ReactNode} [props.tagline] Toolbar subtitle.
- * @param {import('react').ReactNode} [props.actions] Extra toolbar buttons, rendered before Undo / Redo / Run.
- * @param {boolean} [props.statusBar] Show the status line. Default `true`.
+ * @param {boolean} [props.header] Show the toolbar row (view tabs, palette, undo / redo). Default `true`.
+ * @param {'design' | 'preview' | 'code'} [props.defaultView] View shown first. Default `'design'`.
+ * @param {import('react').ReactNode} [props.title] Optional toolbar title, rendered before the view tabs.
+ * @param {import('react').ReactNode} [props.actions] Extra toolbar buttons, rendered before Undo / Redo.
+ * @param {boolean} [props.statusBar] Show compile errors in a bar under the view. Default `true`.
  * @param {boolean} [props.globalShortcuts] Bind undo / delete / duplicate on `window`. Default `true`; set false to keep them inside the preview only.
  * @param {string} [props.className] Added to the root element.
  * @param {import('react').CSSProperties} [props.style] Applied to the root element.
@@ -44,15 +60,19 @@ export function VisualEditor({
   snippets = DEFAULT_SNIPPETS,
   createWorker,
   header = true,
-  title = 'Ono Visual Editor',
-  tagline = 'Click an element to edit it, drag it to move it — the JSX follows.',
+  defaultView = 'design',
+  title,
   actions,
   statusBar = true,
   globalShortcuts = true,
   className = '',
   style,
 }) {
-  const [state, dispatch] = useReducer(reducer, null, () => initialState({ ...(filesProp ?? EXAMPLE_FILES) }, entry));
+  const [state, dispatch] = useReducer(reducer, null, () => ({
+    ...initialState({ ...(filesProp ?? EXAMPLE_FILES) }, entry),
+    selectMode: defaultView === 'design',
+  }));
+  const [view, setView] = useState(defaultView);
   const { files, currentFile, selection, past, future } = state;
   const { compileNow, compileSoon, status, output } = useCompiler(entry, createWorker);
   const iframeRef = useRef(null);
@@ -113,10 +133,11 @@ export function VisualEditor({
     selectRef.current?.(selected && { filename: selected.filename, index: selected.target.index, tag: selected.element.tag });
   }, [selection]);
 
-  // show the selected element's source: switch tab and highlight the range
+  // show the selected element's source: switch file and, in the code view, highlight the range
   useEffect(() => {
     if (!selected) return;
     dispatch({ type: 'switchFile', filename: selected.filename });
+    if (view !== 'code') return;
     requestAnimationFrame(() => {
       const editor = editorRef.current;
       if (!editor) return;
@@ -125,9 +146,14 @@ export function VisualEditor({
       editor.setSelectionRange(start, end);
       const line = editor.value.slice(0, start).split('\n').length - 1;
       editor.scrollTop = Math.max(0, line * parseFloat(getComputedStyle(editor).lineHeight) - editor.clientHeight / 3);
-      editor.blur();
     });
-  }, [selection]);
+  }, [selection, view]);
+
+  /** Design edits the preview; Preview lets it be used as a page (links, inputs); Code shows the JSX. */
+  const switchView = (next) => {
+    setView(next);
+    if (next !== 'code') dispatch({ type: 'setSelectMode', on: next === 'design' });
+  };
 
   // ------------------------------------------------------------ DOM → command targets
   /**
@@ -200,43 +226,30 @@ export function VisualEditor({
   return (
     <div className={('ono-ve ' + className).trim()} style={style}>
       {header && (
-        <header>
+        <header className="toolbar">
           {title && <h1>{title}</h1>}
-          {tagline && <span className="tagline">{tagline}</span>}
+          <div className="views" role="tablist">
+            {VIEWS.map(({ key, label }) => (
+              <button key={key} role="tab" aria-selected={view === key} className={'view-tab' + (view === key ? ' active' : '')} onClick={() => switchView(key)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {view === 'design' && <Palette snippets={snippets} canClick={Boolean(selected)} onInsert={onClickSnippet} />}
           <span className="spacer" />
           {actions}
-          <button onClick={() => dispatch({ type: 'undo' })} disabled={past.length === 0} title="Undo (⌘/Ctrl+Z)">
-            Undo
+          <button className="icon" onClick={() => dispatch({ type: 'undo' })} disabled={past.length === 0} title="Undo (⌘/Ctrl+Z)" aria-label="Undo">
+            <ArrowIcon />
           </button>
-          <button onClick={() => dispatch({ type: 'redo' })} disabled={future.length === 0} title="Redo (⌘/Ctrl+Shift+Z or ⌘/Ctrl+Y)">
-            Redo
-          </button>
-          <button className="primary" onClick={() => compileNow(files)}>
-            Run (⌘/Ctrl+Enter)
+          <button className="icon" onClick={() => dispatch({ type: 'redo' })} disabled={future.length === 0} title="Redo (⌘/Ctrl+Shift+Z or ⌘/Ctrl+Y)" aria-label="Redo">
+            <ArrowIcon mirrored />
           </button>
         </header>
       )}
 
-      <div className="container">
-        <Editor
-          files={files}
-          currentFile={currentFile}
-          onSwitch={(filename) => dispatch({ type: 'switchFile', filename })}
-          onChange={(filename, source) => dispatch({ type: 'setSource', filename, source })}
-          onRun={() => compileNow(files)}
-          editorRef={editorRef}
-        />
-
-        <div className="panel">
-          <div className="panel-header">
-            Preview
-            <span className="spacer" />
-            <label className="checkbox">
-              <input type="checkbox" checked={state.selectMode} onChange={(e) => dispatch({ type: 'setSelectMode', on: e.target.checked })} />
-              select mode
-            </label>
-          </div>
-          <Palette snippets={snippets} canClick={Boolean(selected)} onInsert={onClickSnippet} />
+      <div className="body">
+        {/* both views stay mounted (hidden, not unmounted) so the preview document and the textareas survive a tab switch */}
+        <div className={'view' + (view === 'code' ? ' hidden' : '')}>
           <div className="fill">
             <Preview
               output={output}
@@ -249,17 +262,26 @@ export function VisualEditor({
               iframeRef={iframeRef}
             />
           </div>
+          {view === 'design' && selected && (
+            <aside className="inspector">
+              <Inspector selected={selected} dispatch={dispatch} />
+            </aside>
+          )}
         </div>
 
-        <div className="panel">
-          <div className="panel-header">Inspector</div>
-          <div className="inspector">
-            <Inspector selected={selected} dispatch={dispatch} />
-          </div>
+        <div className={'view' + (view === 'code' ? '' : ' hidden')}>
+          <Editor
+            files={files}
+            currentFile={currentFile}
+            onSwitch={(filename) => dispatch({ type: 'switchFile', filename })}
+            onChange={(filename, source) => dispatch({ type: 'setSource', filename, source })}
+            onRun={() => compileNow(files)}
+            editorRef={editorRef}
+          />
         </div>
       </div>
 
-      {statusBar && <div className={'status' + (status.kind ? ` ${status.kind}` : '')}>{status.text}</div>}
+      {statusBar && status.kind === 'error' && <div className="status error">{status.text}</div>}
     </div>
   );
 }

@@ -33,7 +33,7 @@ export default function App() {
         </Card>
         <section class="rounded-xl bg-emerald-600 p-6 text-white sm:col-span-2">
           <h2 class="text-xl font-semibold">Insert, duplicate, move, delete</h2>
-          <p class="mt-2 text-emerald-100">Every action rewrites the JSX on the left.</p>
+          <p class="mt-2 text-emerald-100">Every action rewrites the JSX — see it in the Code tab.</p>
           <button class="mt-4 rounded-md bg-white px-4 py-2 font-medium text-emerald-700">Get started</button>
         </section>
       </main>

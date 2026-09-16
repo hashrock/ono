@@ -31,14 +31,24 @@ export function App() {
 
 コンパイラのWeb Workerはビルド時にインライン化されているため、利用側でworkerやアセットの設定は不要です。スタイルは `.ono-ve` 配下にスコープされており、`style.css` を1回importするだけです。
 
+## 画面
+
+WYSIWYGエディタとして組み込めるよう、画面は1ペインで、上部ツールバーのタブで切り替えます。
+
+- **Design**：プレビュー上で選択・移動・挿入。要素を選択している間だけ、プレビューに重なるフローティングのインスペクタが右に出ます（プレビューの幅は変わりません。×ボタンか Esc で閉じます）
+- **Preview**：編集操作なしでページとして操作（リンクや入力欄を試す）
+- **Code**：JSXソースを直接編集（複数ファイルならファイルタブ付き。選択中の要素の範囲をハイライト）
+
+見た目はライトテーマで、`.ono-ve` 上の CSS 変数（`--ono-bg` / `--ono-surface` / `--ono-border` / `--ono-text` / `--ono-muted` / `--ono-accent` など）を上書きすればホスト側に合わせられます。
+
 ## できること
 
-- プレビュー上の要素をクリックして選択（ソース側の該当範囲もハイライト）
+- プレビュー上の要素をクリックして選択（Code タブではソース側の該当範囲もハイライト）
 - `class` のGUI編集：クラスはチップ表示（クリックで削除、入力欄で追加）。余白・サイズ・タイポグラフィ・色（パレット＋シェード）・角丸・ボーダー・影・レイアウトはセレクトやスウォッチで切り替え。`sm:` や `hover:` 付きなどGUIが扱わないクラスはチップのまま保持されます
 - テキスト / その他の文字列属性の編集
 - 要素の削除・複製・親要素の選択
 - **ドラッグ＆ドロップで移動**：プレビュー上で要素を掴んで他の要素の前後にドロップ（横並びなら左右、縦積みなら上下にドロップ線が出ます）。コンポーネントのルート（例: `Card` の外側の div）を掴むと、親ファイル側の `<Card>` 使用箇所が移動します
-- **挿入パレット**：プレビュー上部のタイル（Heading / Paragraph / Button / Link / Box / Row / Image / List / Input / Divider）をプレビューへ**ドラッグ＆ドロップ**して要素の前後に挿入、またはクリックで選択要素の直後に挿入。挿入した要素はそのまま選択されます
+- **挿入パレット**：Design タブのツールバーにあるタイル（Heading / Paragraph / Button / Link / Box / Row / Image / List / Input / Divider）をプレビューへ**ドラッグ＆ドロップ**して要素の前後に挿入、またはクリックで選択要素の直後に挿入。挿入した要素はそのまま選択されます
 - Undo / Redo（ボタン、または ⌘/Ctrl+Z, ⌘/Ctrl+Shift+Z / ⌘/Ctrl+Y。テキスト入力中はブラウザ標準の Undo が優先）
 - 複数ファイル（`components/*.jsx` からのimport）対応。コンポーネント内部の要素を選択すると自動でそのファイルのタブに切り替わります
 - 同じコンポーネントが複数回使われている場合も、クリックしたインスタンスに枠が付きます（インスペクタに「Instance n of N」を表示。編集はソース側なので全インスタンスに反映）
@@ -55,10 +65,11 @@ export function App() {
 | `onSelect` | `(sel \| null) => void` | – | 選択変更時に `{ filename, index, tag }` を通知 |
 | `snippets` | `Snippet[]` | `DEFAULT_SNIPPETS` | 挿入パレット（`{ label, icon, code }`） |
 | `createWorker` | `() => Worker` | 同梱のコンパイラWorker | コンパイラWorkerを差し替える |
-| `header` | `boolean` | `true` | 上部ツールバーの表示 |
-| `title` / `tagline` | `ReactNode` | `'Ono Visual Editor'` ほか | ツールバーの見出し |
-| `actions` | `ReactNode` | – | Undo / Redo / Run の前に差し込む追加ボタン |
-| `statusBar` | `boolean` | `true` | 下部ステータス行の表示 |
+| `header` | `boolean` | `true` | 上部ツールバー（タブ・パレット・Undo / Redo）の表示 |
+| `defaultView` | `'design' \| 'preview' \| 'code'` | `'design'` | 最初に表示するタブ |
+| `title` | `ReactNode` | – | ツールバー左端の見出し（省略時は表示しない） |
+| `actions` | `ReactNode` | – | Undo / Redo の前に差し込む追加ボタン |
+| `statusBar` | `boolean` | `true` | コンパイルエラー時に下部へエラー行を表示 |
 | `globalShortcuts` | `boolean` | `true` | `window` にキーボードショートカットを登録。`false` にするとプレビュー内のみ |
 | `className` / `style` | | – | ルート要素に付与 |
 
@@ -92,7 +103,7 @@ src/
   example.js            同梱サンプルプロジェクト
   styles.css            `.ono-ve` 配下にスコープしたスタイル
   components/
-    Editor.jsx          タブ + ファイルごとの textarea
+    Editor.jsx          Code タブ：ファイルタブ + ファイルごとの textarea
     Preview.jsx         iframe への描画、クリック/ホバー/ショートカット
     Inspector.jsx       選択要素の属性・アクション
     Palette.jsx         挿入パレット（HTML5 DnD でプレビューへドロップ）

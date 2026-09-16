@@ -1,4 +1,4 @@
-/** Tabs plus one textarea per file. The active file's textarea is shown; others stay mounted to keep scroll/caret. */
+/** File tabs plus one textarea per file. The active file's textarea is shown; others stay mounted to keep scroll/caret. */
 export function Editor({ files, currentFile, onSwitch, onChange, onRun, editorRef }) {
   const names = Object.keys(files).sort();
 
@@ -17,15 +17,16 @@ export function Editor({ files, currentFile, onSwitch, onChange, onRun, editorRe
   };
 
   return (
-    <div className="panel">
-      <div className="panel-header">JSX</div>
-      <div className="tabs">
-        {names.map((name) => (
-          <button key={name} className={'tab' + (name === currentFile ? ' active' : '')} onClick={() => onSwitch(name)}>
-            {name}
-          </button>
-        ))}
-      </div>
+    <div className="code">
+      {names.length > 1 && (
+        <div className="file-tabs">
+          {names.map((name) => (
+            <button key={name} className={'file-tab' + (name === currentFile ? ' active' : '')} onClick={() => onSwitch(name)}>
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="fill">
         {names.map((name) => (
           <textarea
